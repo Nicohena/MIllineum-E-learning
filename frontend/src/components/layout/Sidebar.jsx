@@ -203,3 +203,5 @@ export const Sidebar = ({ isOpen, setOpen }) => {
 };
 
 export default Sidebar;
+
+// COMMIT_MARKER: touched for repository commit (no functional change)
