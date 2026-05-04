@@ -29,6 +29,8 @@ if (file_exists($envFile)) {
     }
 }
 
+// COMMIT_MARKER: touched for repository commit (no functional change)
+
 // Debug log
 file_put_contents(__DIR__ . '/request.log', date('[Y-m-d H:i:s] ') . $_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . "\n", FILE_APPEND);
 
