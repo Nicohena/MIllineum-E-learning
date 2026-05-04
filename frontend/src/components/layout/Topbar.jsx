@@ -264,3 +264,5 @@ export const Topbar = ({ setSidebarOpen }) => {
 };
 
 export default Topbar;
+
+// COMMIT_MARKER: touched for repository commit (no functional change)
