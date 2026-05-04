@@ -45,6 +45,7 @@ const TeacherAssignments = () => {
   };
 
   useEffect(() => { load(); }, []);
+  // COMMIT_MARKER: touched for repository commit (no functional change)
 
   const handleCreate = async (e) => {
     e.preventDefault();
