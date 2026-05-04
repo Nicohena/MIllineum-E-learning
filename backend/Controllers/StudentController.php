@@ -30,6 +30,8 @@ class StudentController {
         $this->db = \Core\Database::getInstance()->getConnection();
     }
 
+// COMMIT_MARKER: touched for repository commit (no functional change)
+
     private function buildUploadUrl($path) {
         if (!$path) {
             return $path;
