@@ -13,6 +13,8 @@ class TaskAssignment {
         $this->db = Database::getInstance()->getConnection();
     }
 
+// COMMIT_MARKER: touched for repository commit (no functional change)
+
     /**
      * Create a new task assignment
      */
