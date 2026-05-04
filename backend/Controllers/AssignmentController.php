@@ -96,7 +96,20 @@ class AssignmentController {
             $attachmentUrl = $uploadResult;
         }
 
-        $dueDate = str_replace('T', ' ', $data['due_date']);
+        $dueTimestamp = strtotime($data['due_date']);
+        if (!$dueTimestamp) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Due date is invalid']);
+            return;
+        }
+
+        if ($dueTimestamp <= time()) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Due date must be in the future']);
+            return;
+        }
+
+        $dueDate = date('Y-m-d H:i:s', $dueTimestamp);
 
         $result = $this->assignmentModel->create(
             $data['course_id'],
@@ -283,15 +296,23 @@ class AssignmentController {
             return;
         }
 
+        $status = strtotime($assignment['due_date']) < time() ? 'late' : 'submitted';
+
         $result = $this->submissionModel->submit(
             $assignmentId,
             $student['id'],
             $uploadResult,
-            $_POST['notes'] ?? ''
+            $_POST['notes'] ?? '',
+            $status
         );
 
         if ($result) {
-            echo json_encode(['status' => 'success', 'message' => 'Assignment submitted successfully', 'file_url' => $uploadResult]);
+            echo json_encode([
+                'status' => 'success',
+                'message' => $status === 'late' ? 'Assignment submitted late' : 'Assignment submitted successfully',
+                'submission_status' => $status,
+                'file_url' => $uploadResult
+            ]);
         } else {
             http_response_code(500);
             echo json_encode(['error' => 'Failed to submit assignment']);
