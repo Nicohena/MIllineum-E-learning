@@ -260,3 +260,5 @@ const StudentAssignments = () => {
 };
 
 export default StudentAssignments;
+
+// COMMIT_MARKER: touched for repository commit (no functional change)
