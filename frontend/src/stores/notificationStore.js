@@ -43,3 +43,5 @@ export const notificationStore = {
 };
 
 export default notificationStore;
+
+// COMMIT_MARKER: touched for repository commit (no functional change)
