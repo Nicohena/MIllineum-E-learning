@@ -13,6 +13,8 @@ class User {
         $this->db = Database::getInstance()->getConnection();
     }
 
+// COMMIT_MARKER: touched for repository commit (no functional change)
+
     private function normalizeGrade($grade) {
         if ($grade === null || $grade === '') {
             return null;
