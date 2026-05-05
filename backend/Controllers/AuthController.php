@@ -96,7 +96,7 @@ class AuthController {
             return;
         }
 
-        // 2. Validate Input
+        // 2. Validate
         $json = file_get_contents('php://input');
         $data = json_decode($json, true);
 
