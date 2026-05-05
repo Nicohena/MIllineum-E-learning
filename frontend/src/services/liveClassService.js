@@ -1,4 +1,5 @@
 import api from './api';
+import socketService from './socketService';
 
 const liveClassService = {
   createSession: async (data) => {
@@ -24,6 +25,26 @@ const liveClassService = {
   deleteSession: async (sessionId) => {
     const response = await api.delete(`/live-classes/delete?id=${sessionId}`);
     return response.data;
+  },
+
+  notifySessionChanged: (payload) => {
+    socketService.emit('live-class:session-changed', payload);
+  },
+
+  watchSession: (payload) => {
+    socketService.emit('live-class:watch-session', payload);
+  },
+
+  unwatchSession: (payload) => {
+    socketService.emit('live-class:unwatch-session', payload);
+  },
+
+  joinSession: (payload) => {
+    socketService.emit('live-class:join-session', payload);
+  },
+
+  leaveSession: (payload) => {
+    socketService.emit('live-class:leave-session', payload);
   },
 };
 

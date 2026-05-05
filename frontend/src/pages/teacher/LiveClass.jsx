@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
   CheckCircle2,
@@ -12,7 +12,9 @@ import {
   X,
 } from 'lucide-react';
 import liveClassService from '../../services/liveClassService';
+import socketService from '../../services/socketService';
 import teacherService from '../../services/teacherService';
+import { useAuth } from '../../context/AuthContext';
 
 const emptyForm = {
   course_id: '',
@@ -31,6 +33,7 @@ const statusStyles = {
 };
 
 const TeacherLiveClass = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,7 @@ const TeacherLiveClass = () => {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
+  const watchedSessionsRef = useRef(new Set());
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -64,6 +68,70 @@ const TeacherLiveClass = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!user?.token) {
+      return undefined;
+    }
+
+    const socket = socketService.connect({ token: user.token, user });
+    if (!socket) {
+      return undefined;
+    }
+
+    const offSessionChanged = socketService.on('live-class:session-changed', (payload) => {
+      if (payload?.teacherId === user.id) {
+        load();
+      }
+    });
+
+    const offAttendanceUpdated = socketService.on('live-class:attendance-updated', (payload) => {
+      if (!payload?.sessionId) {
+        return;
+      }
+
+      setSessions((prev) => prev.map((session) => (
+        String(session.id) === String(payload.sessionId)
+          ? { ...session, online_attendees: payload.onlineCount }
+          : session
+      )));
+    });
+
+    return () => {
+      offSessionChanged();
+      offAttendanceUpdated();
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const nextWatchedSessions = new Set();
+
+    sessions.forEach((session) => {
+      liveClassService.watchSession({
+        sessionId: session.id,
+        teacherId: user.id,
+      });
+      nextWatchedSessions.add(String(session.id));
+    });
+
+    watchedSessionsRef.current.forEach((sessionId) => {
+      if (!nextWatchedSessions.has(sessionId)) {
+        liveClassService.unwatchSession({ sessionId, teacherId: user.id });
+      }
+    });
+
+    watchedSessionsRef.current = nextWatchedSessions;
+
+    return () => {
+      nextWatchedSessions.forEach((sessionId) => {
+        liveClassService.unwatchSession({ sessionId, teacherId: user.id });
+      });
+    };
+  }, [sessions, user]);
+
   const stats = useMemo(() => ({
     total: sessions.length,
     live: sessions.filter((session) => session.status === 'live').length,
@@ -75,7 +143,18 @@ const TeacherLiveClass = () => {
     event.preventDefault();
     setSubmitting(true);
     try {
-      await liveClassService.createSession(form);
+      const created = await liveClassService.createSession(form);
+      const selectedCourse = courses.find((course) => String(course.id) === String(form.course_id));
+
+      liveClassService.notifySessionChanged({
+        action: 'created',
+        sessionId: created.session_id,
+        teacherId: user?.id,
+        courseId: form.course_id,
+        classId: selectedCourse?.class_id ?? null,
+        status: 'scheduled',
+      });
+
       setForm(emptyForm);
       setShowCreate(false);
       showToast('Live class scheduled');
@@ -90,6 +169,17 @@ const TeacherLiveClass = () => {
   const updateStatus = async (sessionId, status) => {
     try {
       await liveClassService.updateStatus(sessionId, status);
+      const session = sessions.find((item) => String(item.id) === String(sessionId));
+
+      liveClassService.notifySessionChanged({
+        action: 'status-updated',
+        sessionId,
+        teacherId: user?.id,
+        courseId: session?.course_id ?? null,
+        classId: session?.class_id ?? null,
+        status,
+      });
+
       showToast(status === 'live' ? 'Class is now live' : 'Live class updated');
       await load();
     } catch {
@@ -100,7 +190,18 @@ const TeacherLiveClass = () => {
   const deleteSession = async (sessionId) => {
     if (!window.confirm('Delete this live class?')) return;
     try {
+      const session = sessions.find((item) => String(item.id) === String(sessionId));
       await liveClassService.deleteSession(sessionId);
+
+      liveClassService.notifySessionChanged({
+        action: 'deleted',
+        sessionId,
+        teacherId: user?.id,
+        courseId: session?.course_id ?? null,
+        classId: session?.class_id ?? null,
+        status: session?.status ?? null,
+      });
+
       showToast('Live class deleted');
       await load();
     } catch {
@@ -183,6 +284,10 @@ const TeacherLiveClass = () => {
                 <span>{session.duration_minutes} minutes</span>
                 <span className="flex items-center gap-2"><Users size={16} />{session.attendee_count || 0} students</span>
               </div>
+
+              <p className="mt-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+                Live attendees: {session.online_attendees || 0}
+              </p>
 
               <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-50 pt-4">
                 <button

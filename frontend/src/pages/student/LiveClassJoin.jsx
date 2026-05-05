@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, CheckCircle2, ExternalLink, Loader2, User, Video, X } from 'lucide-react';
 import liveClassService from '../../services/liveClassService';
+import socketService from '../../services/socketService';
+import { useAuth } from '../../context/AuthContext';
 
 const statusStyles = {
   live: 'bg-emerald-50 text-emerald-700',
@@ -8,6 +10,7 @@ const statusStyles = {
 };
 
 const LiveClassJoin = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -33,10 +36,54 @@ const LiveClassJoin = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!user?.token) {
+      return undefined;
+    }
+
+    const socket = socketService.connect({ token: user.token, user });
+    if (!socket) {
+      return undefined;
+    }
+
+    const offSessionChanged = socketService.on('live-class:session-changed', (payload) => {
+      if (!payload?.classId || String(payload.classId) !== String(user.class_id)) {
+        return;
+      }
+
+      load();
+    });
+
+    const offAttendanceUpdated = socketService.on('live-class:attendance-updated', (payload) => {
+      if (!payload?.sessionId) {
+        return;
+      }
+
+      setSessions((prev) => prev.map((session) => (
+        String(session.id) === String(payload.sessionId)
+          ? { ...session, online_attendees: payload.onlineCount }
+          : session
+      )));
+    });
+
+    return () => {
+      offSessionChanged();
+      offAttendanceUpdated();
+    };
+  }, [user]);
+
   const nextClass = useMemo(() => sessions.find((session) => session.status === 'live') || sessions[0], [sessions]);
 
-  const joinClass = (url) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const joinClass = (session) => {
+    liveClassService.joinSession({
+      sessionId: session.id,
+      teacherId: session.teacher_id,
+      classId: session.class_id ?? user?.class_id ?? null,
+      studentId: user?.id,
+      studentName: user?.name,
+    });
+
+    window.open(session.meeting_url, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -77,7 +124,7 @@ const LiveClassJoin = () => {
                   <p className="mt-1 text-white/70">{nextClass.course_title} with {nextClass.teacher_name}</p>
                 </div>
                 <button
-                  onClick={() => joinClass(nextClass.meeting_url)}
+                  onClick={() => joinClass(nextClass)}
                   className="flex w-max items-center gap-2 rounded-2xl bg-white px-6 py-3 font-bold text-slate-900 transition-all hover:bg-slate-100"
                 >
                   Join Class <ExternalLink size={18} />
@@ -105,7 +152,7 @@ const LiveClassJoin = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => joinClass(session.meeting_url)}
+                    onClick={() => joinClass(session)}
                     className={`flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-bold transition-all ${
                       session.status === 'live'
                         ? 'bg-emerald-600 text-white hover:bg-emerald-700'
@@ -115,6 +162,10 @@ const LiveClassJoin = () => {
                     {session.status === 'live' ? 'Join Now' : 'Open Link'} <ExternalLink size={17} />
                   </button>
                 </div>
+
+                <p className="mt-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Live attendees: {session.online_attendees || 0}
+                </p>
               </div>
             ))}
           </div>
