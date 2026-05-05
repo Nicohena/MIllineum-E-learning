@@ -76,6 +76,11 @@ class AuthController {
 
     /**
      * Handle the registration request (Admin Only)
+     * 
+     * 
+     * 
+     * 
+     * 
      */
     public function register() {
         // 1. Check Authorization
@@ -159,6 +164,10 @@ class AuthController {
 
     /**
      * Resolve Authorization header across SAPIs and header casing differences.
+     * 
+     * 
+     * 
+     * 
      */
     private function getAuthorizationHeader() {
         $headers = function_exists('getallheaders') ? getallheaders() : [];
