@@ -48,6 +48,9 @@ class StudentController {
 
     /**
      * Get the student's assigned schedule (subjects and teachers)
+     * 
+     * 
+     * 
      */
     public function getSchedule() {
         // 1. Verify Authorization
@@ -70,6 +73,9 @@ class StudentController {
         }
 
         // 2. Fetch Student Data to get their class_id
+
+
+
         $student = $this->userModel->findById($decoded['id']);
         
         if (!$student['class_id']) {
@@ -83,6 +89,8 @@ class StudentController {
         }
 
         // 3. Get Active Academic Year
+
+        
         $activeYear = $this->yearModel->getActiveYear();
         if (!$activeYear) {
             http_response_code(500);
