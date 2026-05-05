@@ -79,7 +79,9 @@ class AuthController {
     }
 
     /**
-     * REGISTER (ADMIN ONLY)
+     * Handle the registration request (Admin Only)
+     * 
+     * 
      * 
      * 
      * 
@@ -191,7 +193,11 @@ class AuthController {
     }
 
     /**
-     * GET AUTH HEADER
+     * Resolve Authorization header across SAPIs and header casing differences.
+     * 
+     * 
+     * 
+     * 
      */
     private function getAuthorizationHeader() {
         $headers = function_exists('getallheaders') ? getallheaders() : [];

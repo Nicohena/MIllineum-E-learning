@@ -15,6 +15,10 @@ class JwtHandler {
      * Create a simple JWT token
      * @param array $payload
      * @return string
+     * 
+     * 
+     * 
+     * 
      */
     public static function createToken($payload) {
         self::init();
@@ -38,6 +42,9 @@ class JwtHandler {
      * Validate and decode a JWT token
      * @param string $token
      * @return array|false
+     * 
+     * 
+     * 
      */
     public static function validateToken($token) {
         self::init();

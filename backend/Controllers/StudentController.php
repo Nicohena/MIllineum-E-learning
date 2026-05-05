@@ -90,7 +90,7 @@ class StudentController {
 
         // 3. Get Active Academic Year
 
-        
+
         $activeYear = $this->yearModel->getActiveYear();
         if (!$activeYear) {
             http_response_code(500);
@@ -179,6 +179,10 @@ class StudentController {
 
     /**
      * Get all graded assignments for the student
+     * 
+     * 
+     * 
+     * 
      */
     public function getGrades() {
         $headers = getallheaders();
