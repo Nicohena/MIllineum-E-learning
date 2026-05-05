@@ -13,6 +13,9 @@ class AuthController {
 
     /**
      * LOGIN
+     * 
+     * 
+
      */
     public function login() {
         header('Content-Type: application/json');
@@ -77,6 +80,9 @@ class AuthController {
 
     /**
      * REGISTER (ADMIN ONLY)
+     * 
+     * 
+     * 
      */
     public function register() {
         header('Content-Type: application/json');
