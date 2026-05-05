@@ -40,7 +40,7 @@ class LiveClassSession {
     }
 
     public function getByTeacher($teacherId) {
-        $sql = "SELECT lcs.*, c.title AS course_title, cl.name AS class_name,
+        $sql = "SELECT lcs.*, c.title AS course_title, c.class_id, cl.name AS class_name,
                        COUNT(u.id) AS attendee_count
                 FROM {$this->table} lcs
                 JOIN courses c ON lcs.course_id = c.id
@@ -57,7 +57,7 @@ class LiveClassSession {
     }
 
     public function getForStudent($studentId) {
-        $sql = "SELECT lcs.*, c.title AS course_title, u.name AS teacher_name
+        $sql = "SELECT lcs.*, c.title AS course_title, c.class_id, u.name AS teacher_name
                 FROM {$this->table} lcs
                 JOIN courses c ON lcs.course_id = c.id
                 JOIN users u ON lcs.teacher_id = u.id

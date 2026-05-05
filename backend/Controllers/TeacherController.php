@@ -12,6 +12,8 @@ use Core\Database;
 use Core\JwtHandler;
 use PDO;
 
+
+
 class TeacherController {
     private $chapterModel;
     private $noteModel;
@@ -26,6 +28,10 @@ class TeacherController {
     }
 
     /**
+     * 
+     * 
+     * 
+     * 
      * Get all courses assigned to the logged-in teacher
      */
     public function getMyCourses() {
@@ -77,6 +83,9 @@ class TeacherController {
     }
 
     /**
+     * 
+     * 
+     * 
      * Verify if the request is from an authorized Teacher for the specific course
      */
     private function verifyTeacher($courseId) {
@@ -108,6 +117,9 @@ class TeacherController {
 
     /**
      * Create a new chapter for a course
+     * 
+     * 
+     * 
      */
     public function createChapter() {
         $data = json_decode(file_get_contents('php://input'), true);
