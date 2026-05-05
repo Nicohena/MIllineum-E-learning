@@ -1,23 +1,6 @@
 import api from './api';
 
 const studentService = {
-  getGrades: async () => {
-    const res = await api.get('/student/grades');
-    return res.data;
-  },
-
-  downloadSubmission: async (submissionId) => {
-    const res = await api.get(`/submissions/${submissionId}/download`, { responseType: 'blob' });
-    return res.data;
-  }
-};
-
-export default studentService;
-
-// COMMIT_MARKER: touched for repository commit (no functional change)
-import api from './api';
-
-const studentService = {
   /**
    * Get student schedule (assigned courses/subjects)
    */

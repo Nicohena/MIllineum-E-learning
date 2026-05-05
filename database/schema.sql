@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS task_assignments (
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
 -- 9. Task Submissions
 CREATE TABLE IF NOT EXISTS task_submissions (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -125,4 +126,26 @@ CREATE TABLE IF NOT EXISTS task_submissions (
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
     
     UNIQUE KEY unique_submission (assignment_id, student_id)
+) ENGINE=InnoDB;
+
+-- 10. Live Class Sessions
+CREATE TABLE IF NOT EXISTS live_class_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    teacher_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    meeting_url VARCHAR(500) NOT NULL,
+    scheduled_at DATETIME NOT NULL,
+    duration_minutes INT DEFAULT 60,
+    status ENUM('scheduled','live','ended','cancelled') DEFAULT 'scheduled',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+
+    INDEX idx_live_class_course (course_id),
+    INDEX idx_live_class_teacher (teacher_id),
+    INDEX idx_live_class_status (status)
 ) ENGINE=InnoDB;

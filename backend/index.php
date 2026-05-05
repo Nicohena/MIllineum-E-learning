@@ -29,8 +29,6 @@ if (file_exists($envFile)) {
     }
 }
 
-// COMMIT_MARKER: touched for repository commit (no functional change)
-
 // Debug log
 file_put_contents(__DIR__ . '/request.log', date('[Y-m-d H:i:s] ') . $_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . "\n", FILE_APPEND);
 
@@ -206,6 +204,21 @@ switch ($resource) {
             $controller->getStudentAssignments();
         } elseif ($id === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $controller->submitAssignment();
+        }
+        break;
+
+    case 'live-classes':
+        $controller = new \Controllers\LiveClassController();
+        if ($id === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->createSession();
+        } elseif ($id === 'teacher' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getTeacherSessions();
+        } elseif ($id === 'student' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getStudentSessions();
+        } elseif ($id === 'status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->updateStatus();
+        } elseif ($id === 'delete' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $controller->deleteSession();
         }
         break;
     

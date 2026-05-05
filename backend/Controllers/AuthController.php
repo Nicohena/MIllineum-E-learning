@@ -11,8 +11,6 @@ class AuthController {
         $this->userModel = new User();
     }
 
-// COMMIT_MARKER: touched for repository commit (no functional change)
-
     /**
      * Handle the login request
      */

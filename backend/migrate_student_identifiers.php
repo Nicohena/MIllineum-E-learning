@@ -17,8 +17,6 @@ function normalize_grade($grade) {
     return null;
 }
 
-// COMMIT_MARKER: touched for repository commit (no functional change)
-
 function build_student_identifier($grade, $id) {
     $normalizedGrade = normalize_grade($grade);
     if (!$normalizedGrade) {

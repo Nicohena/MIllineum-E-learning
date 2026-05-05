@@ -56,5 +56,3 @@ const assignmentService = {
 };
 
 export default assignmentService;
-
-// COMMIT_MARKER: touched for repository commit (no functional change)

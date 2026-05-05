@@ -9,6 +9,7 @@ const statusConfig = {
   null: { label: 'Pending', bgClass: 'bg-amber-50', textClass: 'text-amber-700', borderClass: 'border-amber-100', Icon: AlertCircle, iconCls: 'text-amber-500' },
   pending: { label: 'Pending', bgClass: 'bg-amber-50', textClass: 'text-amber-700', borderClass: 'border-amber-100', Icon: AlertCircle, iconCls: 'text-amber-500' },
   submitted: { label: 'Submitted', bgClass: 'bg-blue-50', textClass: 'text-blue-700', borderClass: 'border-blue-100', Icon: Clock, iconCls: 'text-blue-500' },
+  late: { label: 'Late', bgClass: 'bg-red-50', textClass: 'text-red-700', borderClass: 'border-red-100', Icon: AlertCircle, iconCls: 'text-red-500' },
   graded: { label: 'Graded', bgClass: 'bg-emerald-50', textClass: 'text-emerald-700', borderClass: 'border-emerald-100', Icon: CheckCircle2, iconCls: 'text-emerald-500' },
 };
 
@@ -63,7 +64,7 @@ const StudentAssignments = () => {
   const stats = {
     total: assignments.length,
     pending: assignments.filter(a => !a.submission_status || a.submission_status === 'pending').length,
-    submitted: assignments.filter(a => a.submission_status === 'submitted').length,
+    submitted: assignments.filter(a => a.submission_status === 'submitted' || a.submission_status === 'late').length,
     graded: assignments.filter(a => a.submission_status === 'graded').length,
   };
 
@@ -129,6 +130,7 @@ const StudentAssignments = () => {
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
           <option value="submitted">Submitted</option>
+          <option value="late">Late</option>
           <option value="graded">Graded</option>
         </select>
       </div>
@@ -195,8 +197,10 @@ const StudentAssignments = () => {
                       <UploadCloud size={16} /> Submit Work
                     </button>
                   )}
-                  {status === 'submitted' && (
-                    <span className="text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl">Awaiting grade</span>
+                  {(status === 'submitted' || status === 'late') && (
+                    <span className={`text-sm font-bold px-4 py-2 rounded-xl ${status === 'late' ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'}`}>
+                      {status === 'late' ? 'Submitted late' : 'Awaiting grade'}
+                    </span>
                   )}
                 </div>
               </div>
@@ -260,5 +264,3 @@ const StudentAssignments = () => {
 };
 
 export default StudentAssignments;
-
-// COMMIT_MARKER: touched for repository commit (no functional change)

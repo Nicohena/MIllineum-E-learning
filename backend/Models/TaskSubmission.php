@@ -13,25 +13,24 @@ class TaskSubmission {
         $this->db = Database::getInstance()->getConnection();
     }
 
-// COMMIT_MARKER: touched for repository commit (no functional change)
-
     /**
      * Submit an assignment (upsert)
      */
-    public function submit($assignmentId, $studentId, $fileUrl, $notes = '') {
+    public function submit($assignmentId, $studentId, $fileUrl, $notes = '', $status = 'submitted') {
         $sql = "INSERT INTO {$this->table} (assignment_id, student_id, file_url, notes, status)
-                VALUES (:assignment_id, :student_id, :file_url, :notes, 'submitted')
+                VALUES (:assignment_id, :student_id, :file_url, :notes, :status)
                 ON DUPLICATE KEY UPDATE
                     file_url = VALUES(file_url),
                     notes = VALUES(notes),
-                    status = 'submitted',
+                    status = VALUES(status),
                     submitted_at = CURRENT_TIMESTAMP";
         $stmt = $this->db->prepare($sql);
         if ($stmt->execute([
             'assignment_id' => $assignmentId,
             'student_id'    => $studentId,
             'file_url'      => $fileUrl,
-            'notes'         => $notes
+            'notes'         => $notes,
+            'status'        => $status
         ])) {
             return $this->db->lastInsertId() ?: true;
         }

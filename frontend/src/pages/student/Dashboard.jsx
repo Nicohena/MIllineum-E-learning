@@ -356,5 +356,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
-// COMMIT_MARKER: touched for repository commit (no functional change)
