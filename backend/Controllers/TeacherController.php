@@ -117,6 +117,9 @@ class TeacherController {
 
     /**
      * Create a new chapter for a course
+     * 
+     * 
+     * 
      */
     public function createChapter() {
         $data = json_decode(file_get_contents('php://input'), true);
