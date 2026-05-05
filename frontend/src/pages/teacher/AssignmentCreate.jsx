@@ -22,6 +22,7 @@ const TeacherAssignments = () => {
   // Create form state
   const [form, setForm] = useState({ course_id: '', title: '', instructions: '', due_date: '', points: 100 });
   const [attachFile, setAttachFile] = useState(null);
+  const minDueDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -48,6 +49,10 @@ const TeacherAssignments = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (form.due_date && new Date(form.due_date) <= new Date()) {
+      showToast('Due date must be in the future', 'error');
+      return;
+    }
     setSubmitting(true);
     try {
       await assignmentService.createAssignment(form, attachFile);
@@ -240,7 +245,7 @@ const TeacherAssignments = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Due Date</label>
-                  <input required type="datetime-local" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))}
+                  <input required type="datetime-local" min={minDueDate} value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))}
                     className="w-full px-5 py-3.5 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" />
                 </div>
                 <div className="space-y-1.5">
@@ -302,7 +307,11 @@ const TeacherAssignments = () => {
                         <p className="text-xs text-slate-400">{s.student_email}</p>
                       </div>
                       <span className={`text-[10px] px-2.5 py-1 rounded-full font-black ${
-                        s.status === 'graded' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+                        s.status === 'graded'
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : s.status === 'late'
+                            ? 'bg-red-50 text-red-600'
+                            : 'bg-blue-50 text-blue-600'
                       }`}>{s.status.toUpperCase()}</span>
                     </div>
                     {s.notes && <p className="text-sm text-slate-600 italic">"{s.notes}"</p>}
@@ -311,7 +320,7 @@ const TeacherAssignments = () => {
                         className="text-xs font-bold text-primary-600 hover:underline flex items-center gap-1">
                         <FileText size={14} /> Open Document
                       </a>
-                      {s.status === 'graded' ? (
+                    {s.status === 'graded' ? (
                         <span className="text-sm font-black text-emerald-600">{s.grade}/{showSubmissions.points} pts</span>
                       ) : (
                         gradingId === s.id ? (

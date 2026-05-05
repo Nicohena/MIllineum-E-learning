@@ -206,6 +206,21 @@ switch ($resource) {
             $controller->submitAssignment();
         }
         break;
+
+    case 'live-classes':
+        $controller = new \Controllers\LiveClassController();
+        if ($id === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->createSession();
+        } elseif ($id === 'teacher' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getTeacherSessions();
+        } elseif ($id === 'student' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getStudentSessions();
+        } elseif ($id === 'status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->updateStatus();
+        } elseif ($id === 'delete' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $controller->deleteSession();
+        }
+        break;
     
     case 'messages':
         $controller = new \Controllers\MessageController();
