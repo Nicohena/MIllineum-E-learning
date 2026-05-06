@@ -27,6 +27,7 @@ import CourseContentEditor from '../pages/teacher/CourseContentEditor';
 import TeacherAssignments from '../pages/teacher/AssignmentCreate';
 import ForumManage from '../pages/teacher/ForumManage';
 import GradingView from '../pages/teacher/GradingView';
+import TeacherMessaging from '../pages/teacher/Messaging';
 import TeacherLiveClass from '../pages/teacher/LiveClass';
 import TeacherDashboard from '../pages/teacher/TeacherDashboard';
 
@@ -126,6 +127,14 @@ export const AppRoutes = () => (
         element={
           <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
             <ForumManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="teacher/messages"
+        element={
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
+            <TeacherMessaging />
           </ProtectedRoute>
         }
       />
