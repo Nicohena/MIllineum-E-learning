@@ -11,9 +11,14 @@ const messageService = {
     return response.data.messages || [];
   },
 
-  sendMessage: async (receiverId, content) => {
-    const response = await api.post('/messages/send', { receiver_id: receiverId, content });
+  sendMessage: async (receiverId, content, parentId = null) => {
+    const response = await api.post('/messages/send', { receiver_id: receiverId, content, parent_id: parentId });
     return response.data;
+  },
+
+  getThreadMessages: async (parentId, isGroup = false) => {
+    const response = await api.get(`/messages/thread?parent_id=${parentId}&is_group=${isGroup ? 1 : 0}`);
+    return response.data.messages || [];
   },
 
   getUnreadCount: async () => {

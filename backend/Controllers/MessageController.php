@@ -102,12 +102,13 @@ class MessageController {
 
         $data = json_decode(file_get_contents('php://input'), true);
         $receiverId = $data['receiver_id'];
+        $parentId = $data['parent_id'] ?? null;
         
         if (strpos($receiverId, 'group_') === 0) {
             $classId = substr($receiverId, 6);
-            $result = $this->messageModel->sendGroupMessage($user['id'], $classId, $data['content']);
+            $result = $this->messageModel->sendGroupMessage($user['id'], $classId, $data['content'], $parentId);
         } else {
-            $result = $this->messageModel->sendMessage($user['id'], $receiverId, $data['content']);
+            $result = $this->messageModel->sendMessage($user['id'], $receiverId, $data['content'], $parentId);
         }
 
         if ($result) {
@@ -115,6 +116,18 @@ class MessageController {
         } else {
             http_response_code(500);
         }
+    }
+
+    public function getThreadMessages() {
+        $user = $this->auth();
+        if (!$user) return;
+
+        $parentId = $_GET['parent_id'] ?? null;
+        $isGroup = ($_GET['is_group'] ?? '0') === '1';
+        if (!$parentId) return;
+
+        $messages = $this->messageModel->getThreadMessages($parentId, $isGroup);
+        echo json_encode(['status' => 'success', 'messages' => $messages]);
     }
 
     public function getUnreadCount() {

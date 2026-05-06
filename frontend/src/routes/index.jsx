@@ -30,6 +30,7 @@ import GradingView from '../pages/teacher/GradingView';
 import TeacherMessaging from '../pages/teacher/Messaging';
 import TeacherLiveClass from '../pages/teacher/LiveClass';
 import TeacherDashboard from '../pages/teacher/TeacherDashboard';
+import ForumView from '../pages/student/ForumView';
 
 const RoleDashboard = () => {
   const { user } = useAuth();
@@ -200,6 +201,14 @@ export const AppRoutes = () => (
         element={
           <ProtectedRoute allowedRoles={[ROLES.STUDENT]}>
             <Messaging />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="student/forum"
+        element={
+          <ProtectedRoute allowedRoles={[ROLES.STUDENT]}>
+            <ForumView />
           </ProtectedRoute>
         }
       />

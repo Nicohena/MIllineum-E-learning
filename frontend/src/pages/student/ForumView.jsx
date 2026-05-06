@@ -1,5 +1,4 @@
-// pages/student/ForumViewEnhanced.jsx (future implementation)
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   MessageSquare, 
   Search, 
@@ -12,189 +11,481 @@ import {
   TrendingUp,
   Award,
   Clock,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft,
+  Send,
+  Loader2,
+  BookOpen,
+  Settings
 } from 'lucide-react';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import forumService from '../../services/forumService';
+import { useAuth } from '../../context/AuthContext';
 
-const ForumView= () => {
+const ForumView = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [threads, setThreads] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [newThreadModal, setNewThreadModal] = useState(false);
+  const [newReplyContent, setNewReplyContent] = useState('');
   
-  const categories = [
-    { id: 'all', name: 'All Discussions', count: 654, icon: MessageSquare },
-    { id: 'my-courses', name: 'My Courses', count: 12, icon: Users },
-    { id: 'pinned', name: 'Pinned', count: 3, icon: Pin },
-    { id: 'unanswered', name: 'Unanswered', count: 8, icon: MessageCircle },
-  ];
-  
-  const threads = [
-    {
-      id: 1,
-      title: 'Understanding React Hooks - Best Practices',
-      author: 'Prof. Sarah Johnson',
-      authorRole: 'teacher',
-      course: 'Advanced React Development',
-      replies: 15,
-      views: 234,
-      upvotes: 45,
-      isPinned: true,
-      isVerified: true,
-      lastActivity: '2 hours ago',
-      tags: ['react', 'hooks', 'javascript']
-    },
-    // ... more threads
-  ];
-  
+  // New thread form state
+  const [newThreadTitle, setNewThreadTitle] = useState('');
+  const [newThreadCategory, setNewThreadCategory] = useState('');
+  const [newThreadContent, setNewThreadContent] = useState('');
+
+  const iconMap = {
+    MessageSquare,
+    BookOpen,
+    Settings,
+    Users
+  };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    setLoading(true);
+    try {
+      const [cats, initialThreads] = await Promise.all([
+        forumService.getCategories(),
+        forumService.getThreads()
+      ]);
+      setCategories(cats);
+      setThreads(initialThreads);
+    } catch (error) {
+      console.error("Failed to fetch forum data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCategorySelect = async (catId) => {
+    setSelectedCategory(catId);
+    setSelectedThread(null);
+    setLoading(true);
+    try {
+      const filteredThreads = await forumService.getThreads(catId, searchTerm);
+      setThreads(filteredThreads);
+    } catch (error) {
+      console.error("Failed to fetch threads:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const filteredThreads = await forumService.getThreads(selectedCategory, searchTerm);
+      setThreads(filteredThreads);
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleThreadClick = async (threadId) => {
+    setLoading(true);
+    try {
+      const threadData = await forumService.getThread(threadId);
+      setSelectedThread(threadData);
+    } catch (error) {
+      console.error("Failed to fetch thread details:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateThread = async (e) => {
+    e.preventDefault();
+    try {
+      await forumService.createThread({
+        category_id: newThreadCategory,
+        title: newThreadTitle,
+        content: newThreadContent
+      });
+      setNewThreadModal(false);
+      setNewThreadTitle('');
+      setNewThreadContent('');
+      fetchInitialData();
+    } catch (error) {
+      console.error("Failed to create thread:", error);
+    }
+  };
+
+  const handleAddReply = async (e) => {
+    e.preventDefault();
+    if (!newReplyContent.trim()) return;
+    try {
+      await forumService.addReply({
+        thread_id: selectedThread.id,
+        content: newReplyContent
+      });
+      setNewReplyContent('');
+      const updatedThread = await forumService.getThread(selectedThread.id);
+      setSelectedThread(updatedThread);
+    } catch (error) {
+      console.error("Failed to add reply:", error);
+    }
+  };
+
+  if (loading && !selectedThread && !threads.length) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Discussion Forum</h1>
-          <p className="text-slate-500 mt-1">Connect, learn, and grow with your peers</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Discussion Forum</h1>
+          <p className="text-slate-500 font-medium">Collaborate, ask questions, and share knowledge.</p>
         </div>
-        <Button leftIcon={<Plus size={18} />} variant="primary">
+        <Button 
+          leftIcon={<Plus size={18} />} 
+          variant="primary"
+          onClick={() => setNewThreadModal(true)}
+          className="rounded-2xl shadow-lg shadow-indigo-100"
+        >
           New Discussion
         </Button>
       </div>
       
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card variant="white" padding="md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Total Discussions</p>
-              <p className="text-2xl font-bold text-slate-800">1,247</p>
-            </div>
-            <MessageSquare size={32} className="text-indigo-400" />
-          </div>
-        </Card>
-        <Card variant="white" padding="md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Active Users</p>
-              <p className="text-2xl font-bold text-slate-800">342</p>
-            </div>
-            <Users size={32} className="text-emerald-400" />
-          </div>
-        </Card>
-        <Card variant="white" padding="md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Teacher Answers</p>
-              <p className="text-2xl font-bold text-slate-800">89</p>
-            </div>
-            <Award size={32} className="text-amber-400" />
-          </div>
-        </Card>
-        <Card variant="white" padding="md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Today&apos;s Activity</p>
-              <p className="text-2xl font-bold text-slate-800">156</p>
-            </div>
-            <TrendingUp size={32} className="text-purple-400" />
-          </div>
-        </Card>
-      </div>
-      
       {/* Search and Filters */}
-      <Card variant="glass" padding="md">
+      <Card variant="white" padding="md" className="rounded-[2rem] border-slate-100 shadow-xl shadow-slate-100/50">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+          <form onSubmit={handleSearch} className="flex-1 relative">
+            <Search size={18} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search discussions..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none font-medium text-sm transition-all"
             />
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                  selectedCategory === cat.id
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {cat.name}
-                <span className="ml-1 text-xs opacity-75">({cat.count})</span>
-              </button>
-            ))}
+          </form>
+          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
+            <button
+              onClick={() => handleCategorySelect(null)}
+              className={`px-5 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap ${
+                selectedCategory === null
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+              }`}
+            >
+              All Categories
+            </button>
+            {categories.map(cat => {
+              const Icon = iconMap[cat.icon] || MessageSquare;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategorySelect(cat.id)}
+                  className={`px-5 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+                    selectedCategory === cat.id
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {cat.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       </Card>
       
-      {/* Threads List */}
-      <div className="space-y-3">
-        {threads.map((thread) => (
-          <div key={thread.id} className="bg-white rounded-xl border border-slate-100 p-5 hover:shadow-md transition-all cursor-pointer group">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  {thread.isPinned && (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                      <Pin size={12} />
-                      Pinned
-                    </span>
-                  )}
-                  {thread.isVerified && (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      <CheckCircle size={12} />
-                      Verified Answer
-                    </span>
-                  )}
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                    thread.authorRole === 'teacher' 
-                      ? 'bg-purple-50 text-purple-600' 
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {thread.authorRole === 'teacher' ? 'Teacher' : 'Student'}
+      {selectedThread ? (
+        /* Thread View */
+        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+          <button 
+            onClick={() => setSelectedThread(null)}
+            className="flex items-center gap-2 text-slate-500 font-bold hover:text-indigo-600 transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Back to Discussions
+          </button>
+          
+          <Card padding="lg" className="rounded-[2.5rem] border-slate-100 shadow-xl overflow-hidden">
+            <div className="space-y-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+                    {selectedThread.category_name}
                   </span>
+                  <h2 className="text-2xl font-black text-slate-900 leading-tight">
+                    {selectedThread.title}
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-500">
+                      {selectedThread.author_name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-800">{selectedThread.author_name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {selectedThread.author_role} • {new Date(selectedThread.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                
-                <h3 className="font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">
-                  {thread.title}
-                </h3>
-                <p className="text-sm text-slate-500 mb-2">
-                  by {thread.author} • {thread.course}
-                </p>
-                
-                <div className="flex items-center gap-4 text-xs text-slate-400">
-                  <span className="flex items-center gap-1">
-                    <MessageCircle size={12} />
-                    {thread.replies} replies
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp size={12} />
-                    {thread.upvotes} upvotes
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock size={12} />
-                    {thread.lastActivity}
-                  </span>
-                </div>
-                
-                <div className="flex gap-2 mt-3">
-                  {thread.tags.map(tag => (
-                    <span key={tag} className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
+                {selectedThread.is_pinned && <Pin size={20} className="text-amber-500" />}
               </div>
               
-              <ChevronRight size={20} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="text-slate-600 leading-relaxed font-medium bg-slate-50/50 p-6 rounded-3xl">
+                {selectedThread.content}
+              </div>
+              
+              <div className="pt-6 border-t border-slate-100 space-y-6">
+                <h3 className="text-lg font-black text-slate-900">Replies ({selectedThread.replies.length})</h3>
+                <div className="space-y-4">
+                  {selectedThread.replies.map(reply => (
+                    <div key={reply.id} className="flex gap-4 group">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center font-black text-indigo-500 text-xs shrink-0">
+                        {reply.author_name.charAt(0)}
+                      </div>
+                      <div className="flex-1 bg-white border border-slate-100 p-4 rounded-2xl group-hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-black text-slate-800">{reply.author_name}</p>
+                          <p className="text-[10px] font-bold text-slate-400">{new Date(reply.created_at).toLocaleString()}</p>
+                        </div>
+                        <p className="text-sm text-slate-600 font-medium">{reply.content}</p>
+                        {reply.is_verified && (
+                          <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full">
+                            <CheckCircle size={10} />
+                            Teacher Verified
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Reply Form */}
+                <form onSubmit={handleAddReply} className="flex items-start gap-4 pt-4">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white shrink-0">
+                    {user.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 relative">
+                    <textarea
+                      placeholder="Write your reply..."
+                      value={newReplyContent}
+                      onChange={(e) => setNewReplyContent(e.target.value)}
+                      className="w-full bg-slate-50 border-none rounded-2xl p-4 pr-12 text-sm font-medium focus:ring-2 focus:ring-indigo-100 outline-none resize-none h-24"
+                    />
+                    <button 
+                      type="submit"
+                      className="absolute bottom-4 right-4 p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-transform shadow-lg shadow-indigo-100"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
+          </Card>
+        </div>
+      ) : (
+        /* Threads List */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            {threads.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <MessageSquare className="mx-auto mb-4 text-slate-200" size={64} />
+                <h3 className="text-xl font-black text-slate-800">No discussions found</h3>
+                <p className="text-slate-400 font-medium">Be the first to start a conversation!</p>
+              </div>
+            ) : (
+              threads.map((thread) => (
+                <div 
+                  key={thread.id} 
+                  onClick={() => handleThreadClick(thread.id)}
+                  className="bg-white rounded-3xl border border-slate-50 p-6 hover:shadow-xl hover:shadow-indigo-50/50 hover:border-indigo-100 transition-all cursor-pointer group animate-in slide-in-from-bottom-4 duration-500"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {thread.is_pinned && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
+                            <Pin size={12} />
+                            PINNED
+                          </span>
+                        )}
+                        <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">
+                          {thread.category_name}
+                        </span>
+                      </div>
+                      
+                      <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
+                        {thread.title}
+                      </h3>
+                      
+                      <p className="text-sm text-slate-500 font-medium line-clamp-2">
+                        {thread.content}
+                      </p>
+                      
+                      <div className="flex items-center gap-4 pt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-400">
+                            {thread.author_name.charAt(0)}
+                          </div>
+                          <span className="text-xs font-black text-slate-800">{thread.author_name}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          <span className="flex items-center gap-1.5">
+                            <MessageCircle size={14} className="text-indigo-400" />
+                            {thread.reply_count} replies
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <TrendingUp size={14} className="text-emerald-400" />
+                            {thread.views} views
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">
+                      <ChevronRight size={20} />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        ))}
-      </div>
+          
+          {/* Sidebar Stats */}
+          <div className="space-y-6">
+            <Card variant="indigo" padding="lg" className="rounded-[2.5rem] bg-indigo-600 text-white shadow-xl shadow-indigo-200">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-100 text-xs font-black uppercase tracking-widest">Forum Stats</p>
+                    <h3 className="text-2xl font-black mt-1">Activity</h3>
+                  </div>
+                  <TrendingUp size={32} className="text-white/20" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/10 p-4 rounded-3xl">
+                    <p className="text-2xl font-black">{threads.length}</p>
+                    <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest">Threads</p>
+                  </div>
+                  <div className="bg-white/10 p-4 rounded-3xl">
+                    <p className="text-2xl font-black">{threads.reduce((acc, t) => acc + parseInt(t.reply_count), 0)}</p>
+                    <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest">Replies</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+            
+            <Card padding="md" className="rounded-[2.5rem] border-slate-100 shadow-xl shadow-slate-100/50">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4">Forum Rules</h3>
+              <ul className="space-y-4">
+                {[
+                  'Be respectful and professional',
+                  'Stay on topic in categories',
+                  'Search before asking',
+                  'No spam or advertisements'
+                ].map((rule, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm font-bold text-slate-500">
+                    <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-xs text-slate-400">
+                      {i + 1}
+                    </div>
+                    {rule}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* New Thread Modal */}
+      {newThreadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <Card padding="lg" className="w-full max-w-xl rounded-[2.5rem] shadow-2xl border-none">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-black text-slate-900">Start Discussion</h2>
+                <button onClick={() => setNewThreadModal(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                  <Plus size={24} className="rotate-45 text-slate-400" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleCreateThread} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Title</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="What's on your mind?"
+                    value={newThreadTitle}
+                    onChange={(e) => setNewThreadTitle(e.target.value)}
+                    className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none font-bold text-slate-800"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+                  <select
+                    required
+                    value={newThreadCategory}
+                    onChange={(e) => setNewThreadCategory(e.target.value)}
+                    className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none font-bold text-slate-800 appearance-none"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Message</label>
+                  <textarea
+                    required
+                    placeholder="Tell us more..."
+                    value={newThreadContent}
+                    onChange={(e) => setNewThreadContent(e.target.value)}
+                    className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none font-medium text-slate-600 resize-none h-40"
+                  />
+                </div>
+                
+                <div className="flex gap-4 pt-2">
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    fullWidth
+                    onClick={() => setNewThreadModal(false)}
+                    className="rounded-2xl"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    variant="primary" 
+                    fullWidth
+                    className="rounded-2xl shadow-lg shadow-indigo-100"
+                  >
+                    Post Discussion
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

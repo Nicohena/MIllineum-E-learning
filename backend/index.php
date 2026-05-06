@@ -221,6 +221,22 @@ switch ($resource) {
             $controller->deleteSession();
         }
         break;
+    case 'forum':
+        $controller = new \Controllers\ForumController();
+        if ($id === 'categories' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getCategories();
+        } elseif ($id === 'threads' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getThreads();
+        } elseif ($id === 'threads' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->createThread();
+        } elseif ($id === 'thread' && $uri_parts[$api_index + 2] && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getThread($uri_parts[$api_index + 2]);
+        } elseif ($id === 'reply' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->createReply();
+        } elseif ($id === 'pin' && $uri_parts[$api_index + 2] && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->togglePin($uri_parts[$api_index + 2]);
+        }
+        break;
     
     case 'messages':
         $controller = new \Controllers\MessageController();
@@ -234,6 +250,8 @@ switch ($resource) {
             $controller->getUnreadCount();
         } elseif ($id === 'contacts' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             $controller->getContacts();
+        } elseif ($id === 'thread' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getThreadMessages();
         }
         break;
 

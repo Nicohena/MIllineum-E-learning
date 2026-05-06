@@ -113,6 +113,7 @@ export const Sidebar = ({ isOpen, setOpen }) => {
             { to: '/teacher/live-classes', icon: Video, label: 'Live Classes' },
             { to: '/teacher/grading', icon: BarChart3, label: 'Grading' },
             { to: '/teacher/messages', icon: MessageSquare, label: 'Messages', badge: '3' },
+            { to: '/teacher/forum', icon: Users, label: 'Discussion Forum' },
           ],
         },
       ];
@@ -128,6 +129,7 @@ export const Sidebar = ({ isOpen, setOpen }) => {
           { to: '/student/live-classes', icon: Video, label: 'Live Classes' },
           { to: '/student/grades', icon: BarChart3, label: 'My Grades' },
           { to: '/student/messages', icon: MessageSquare, label: 'Messaging', badge: '5' },
+          { to: '/student/forum', icon: Users, label: 'Discussion Forum' },
         ],
       },
     ];
