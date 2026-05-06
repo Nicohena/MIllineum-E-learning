@@ -4,7 +4,8 @@ import {
   Phone, Video, Plus, 
   CheckCheck, Check,
   MessageSquare, Loader2, ChevronLeft,
-  GraduationCap, Smile, Paperclip, Image
+  GraduationCap, Smile, Paperclip,
+  MessageCircle, X, Reply
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import messageService from '../../services/messageService';
@@ -20,7 +21,15 @@ const TeacherMessaging = () => {
   const [showContacts, setShowContacts] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sendingMsg, setSendingMsg] = useState(false);
+
+  // Thread State
+  const [activeThread, setActiveThread] = useState(null);
+  const [threadMessages, setThreadMessages] = useState([]);
+  const [newThreadMessage, setNewThreadMessage] = useState('');
+  const [loadingThread, setLoadingThread] = useState(false);
+
   const chatEndRef = useRef(null);
+  const threadEndRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -59,26 +68,69 @@ const TeacherMessaging = () => {
   }, [activeContact]);
 
   useEffect(() => {
+    let threadInterval;
+    if (activeThread) {
+      const fetchThread = async () => {
+        try {
+          const data = await messageService.getThreadMessages(activeThread.id, !!activeContact?.is_group);
+          setThreadMessages(data);
+        } catch (error) {
+          console.error("Thread fetch error:", error);
+        }
+      };
+      fetchThread();
+      threadInterval = setInterval(fetchThread, 3000);
+    }
+    return () => clearInterval(threadInterval);
+  }, [activeThread, activeContact]);
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async (e) => {
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [threadMessages]);
+
+  const handleSend = async (e, isThread = false) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeContact || sendingMsg) return;
+    const content = isThread ? newThreadMessage : newMessage;
+    const setContent = isThread ? setNewThreadMessage : setNewMessage;
+    
+    if (!content.trim() || !activeContact || sendingMsg) return;
 
     const cid = activeContact.id || activeContact.contact_id;
+    const parentId = isThread ? activeThread.id : null;
+    
     setSendingMsg(true);
     try {
-      await messageService.sendMessage(cid, newMessage);
-      setNewMessage('');
-      const data = await messageService.getMessages(cid);
-      setMessages(data);
-      inputRef.current?.focus();
+      await messageService.sendMessage(cid, content, parentId);
+      setContent('');
+      if (isThread) {
+        const data = await messageService.getThreadMessages(activeThread.id, !!activeContact.is_group);
+        setThreadMessages(data);
+      } else {
+        const data = await messageService.getMessages(cid);
+        setMessages(data);
+        inputRef.current?.focus();
+      }
     } catch (error) {
       console.error("Send error:", error);
     } finally {
       setSendingMsg(false);
     }
+  };
+
+  const handleOpenThread = (msg) => {
+    setActiveThread(msg);
+    setThreadMessages([]);
+    setLoadingThread(true);
+    messageService.getThreadMessages(msg.id, !!activeContact.is_group)
+      .then(data => {
+        setThreadMessages(data);
+        setLoadingThread(false);
+      })
+      .catch(() => setLoadingThread(false));
   };
 
   const filteredConversations = conversations.filter(c =>
@@ -172,7 +224,7 @@ const TeacherMessaging = () => {
                     key={conv.contact_id} 
                     conv={conv} 
                     isActive={activeContact?.contact_id === conv.contact_id || activeContact?.id === conv.contact_id}
-                    onClick={() => { setActiveContact(conv); setSearchTerm(''); }} 
+                    onClick={() => { setActiveContact(conv); setSearchTerm(''); setActiveThread(null); }} 
                   />
                 ))}
                 {filteredConversations.length === 0 && (
@@ -190,93 +242,165 @@ const TeacherMessaging = () => {
         {/* Chat Area */}
         <div className={`flex-1 flex flex-col bg-gradient-to-b from-slate-50/50 to-white ${!activeContact ? 'hidden md:flex' : 'flex'}`}>
           {activeContact ? (
-            <>
-              {/* Chat Header */}
-              <div className="bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => setActiveContact(null)} className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
-                    <ChevronLeft size={20} />
-                  </button>
-                  <div className="relative">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm ${
-                      activeContact.is_group 
-                        ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white' 
-                        : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
-                    }`}>
-                      {activeContact.is_group 
-                        ? <Users size={18} /> 
-                        : (activeContact.contact_name?.charAt(0) || activeContact.name?.charAt(0) || '?')
-                      }
+            <div className="flex-1 flex h-full overflow-hidden">
+              <div className={`flex-1 flex flex-col ${activeThread ? 'hidden lg:flex' : 'flex'}`}>
+                {/* Chat Header */}
+                <div className="bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setActiveContact(null)} className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
+                      <ChevronLeft size={20} />
+                    </button>
+                    <div className="relative">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm ${
+                        activeContact.is_group 
+                          ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white' 
+                          : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                      }`}>
+                        {activeContact.is_group 
+                          ? <Users size={18} /> 
+                          : (activeContact.contact_name?.charAt(0) || activeContact.name?.charAt(0) || '?')
+                        }
+                      </div>
+                      {!activeContact.is_group && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full" />
+                      )}
                     </div>
-                    {!activeContact.is_group && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full" />
-                    )}
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm leading-tight">
+                        {activeContact.contact_name || activeContact.name}
+                      </h3>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mt-0.5 text-emerald-500">
+                        {activeContact.is_group ? `Class Group` : activeContact.contact_role || activeContact.role || 'Online'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm leading-tight">
-                      {activeContact.contact_name || activeContact.name}
-                    </h3>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mt-0.5 text-emerald-500">
-                      {activeContact.is_group ? `Class Group` : activeContact.contact_role || activeContact.role || 'Online'}
-                    </p>
+                  <div className="flex items-center gap-1">
+                    <IconBtn icon={Phone} />
+                    <IconBtn icon={Video} />
+                    <IconBtn icon={MoreVertical} />
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <IconBtn icon={Phone} />
-                  <IconBtn icon={Video} />
-                  <IconBtn icon={MoreVertical} />
-                </div>
-              </div>
 
-              {/* Messages Body */}
-              <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
-                {messages.length === 0 && (
-                  <div className="text-center py-16 opacity-40">
-                    <MessageSquare className="mx-auto mb-3" size={32} />
-                    <p className="text-sm font-semibold">No messages yet</p>
-                    <p className="text-xs mt-1">Send the first message to start the conversation</p>
-                  </div>
-                )}
-                {messages.map((msg) => (
-                  <MessageBubble 
-                    key={msg.id} 
-                    msg={msg} 
-                    isMe={msg.sender_id == user.id} 
-                    isGroup={activeContact.is_group}
-                  />
-                ))}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Input Area */}
-              <div className="px-5 py-4 bg-white border-t border-slate-100">
-                <form onSubmit={handleSend} className="flex items-center gap-3">
-                  <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-1 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-200 focus-within:bg-white transition-all">
-                    <input 
-                      ref={inputRef}
-                      type="text" 
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type your message..." 
-                      className="flex-1 bg-transparent border-none py-2.5 text-sm placeholder:text-slate-300 focus:ring-0 focus:outline-none"
+                {/* Messages Body */}
+                <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+                  {messages.length === 0 && (
+                    <div className="text-center py-16 opacity-40">
+                      <MessageSquare className="mx-auto mb-3" size={32} />
+                      <p className="text-sm font-semibold">No messages yet</p>
+                      <p className="text-xs mt-1">Send the first message to start the conversation</p>
+                    </div>
+                  )}
+                  {messages.map((msg) => (
+                    <MessageBubble 
+                      key={msg.id} 
+                      msg={msg} 
+                      isMe={msg.sender_id == user.id} 
+                      isGroup={activeContact.is_group}
+                      onReply={() => handleOpenThread(msg)}
                     />
-                    <button type="button" className="p-1.5 text-slate-300 hover:text-slate-500 transition-colors">
-                      <Smile size={18} />
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Input Area */}
+                <div className="px-5 py-4 bg-white border-t border-slate-100">
+                  <form onSubmit={(e) => handleSend(e)} className="flex items-center gap-3">
+                    <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-1 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-200 focus-within:bg-white transition-all">
+                      <input 
+                        ref={inputRef}
+                        type="text" 
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type your message..." 
+                        className="flex-1 bg-transparent border-none py-2.5 text-sm placeholder:text-slate-300 focus:ring-0 focus:outline-none"
+                      />
+                      <button type="button" className="p-1.5 text-slate-300 hover:text-slate-500 transition-colors">
+                        <Smile size={18} />
+                      </button>
+                      <button type="button" className="p-1.5 text-slate-300 hover:text-slate-500 transition-colors">
+                        <Paperclip size={18} />
+                      </button>
+                    </div>
+                    <button 
+                      type="submit"
+                      disabled={!newMessage.trim() || sendingMsg}
+                      className="w-11 h-11 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl flex items-center justify-center hover:from-indigo-600 hover:to-indigo-700 hover:shadow-lg hover:shadow-indigo-200 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                    >
+                      {sendingMsg ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
-                    <button type="button" className="p-1.5 text-slate-300 hover:text-slate-500 transition-colors">
-                      <Paperclip size={18} />
+                  </form>
+                </div>
+              </div>
+
+              {/* Thread Panel */}
+              {activeThread && (
+                <div className="w-full lg:w-[400px] border-l border-slate-100 flex flex-col bg-white animate-in slide-in-from-right duration-300">
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle size={18} className="text-indigo-600" />
+                      <h3 className="font-bold text-slate-900 text-sm">Thread</h3>
+                    </div>
+                    <button onClick={() => setActiveThread(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                      <X size={18} />
                     </button>
                   </div>
-                  <button 
-                    type="submit"
-                    disabled={!newMessage.trim() || sendingMsg}
-                    className="w-11 h-11 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl flex items-center justify-center hover:from-indigo-600 hover:to-indigo-700 hover:shadow-lg hover:shadow-indigo-200 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
-                  >
-                    {sendingMsg ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  </button>
-                </form>
-              </div>
-            </>
+                  
+                  <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    {/* Original Message */}
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Original Message</p>
+                      <p className="text-sm text-slate-700 font-medium leading-relaxed">{activeThread.content}</p>
+                      <p className="text-[10px] text-slate-400 mt-2 font-bold">{new Date(activeThread.created_at).toLocaleString()}</p>
+                    </div>
+
+                    {/* Thread Replies */}
+                    <div className="space-y-4">
+                      {loadingThread ? (
+                        <div className="flex justify-center py-10">
+                          <Loader2 size={24} className="text-indigo-500 animate-spin" />
+                        </div>
+                      ) : (
+                        threadMessages.map(reply => (
+                          <div key={reply.id} className="flex gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center font-bold text-xs text-indigo-600 shrink-0">
+                              {reply.sender_name?.charAt(0)}
+                            </div>
+                            <div className="flex-1 bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
+                              <div className="flex justify-between mb-1">
+                                <span className="text-[11px] font-black text-slate-800">{reply.sender_name}</span>
+                                <span className="text-[9px] font-bold text-slate-400">{new Date(reply.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <p className="text-sm text-slate-600 font-medium">{reply.content}</p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      <div ref={threadEndRef} />
+                    </div>
+                  </div>
+
+                  {/* Thread Input */}
+                  <div className="p-4 border-t border-slate-100">
+                    <form onSubmit={(e) => handleSend(e, true)} className="flex items-center gap-2">
+                      <input 
+                        type="text" 
+                        value={newThreadMessage}
+                        onChange={(e) => setNewThreadMessage(e.target.value)}
+                        placeholder="Reply to thread..." 
+                        className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                      />
+                      <button 
+                        type="submit"
+                        disabled={!newThreadMessage.trim() || sendingMsg}
+                        className="w-9 h-9 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all disabled:opacity-40"
+                      >
+                        <Send size={14} />
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
               <div className="relative mb-6">
@@ -349,22 +473,35 @@ const ContactItem = ({ user, onClick }) => (
   </div>
 );
 
-const MessageBubble = ({ msg, isMe, isGroup }) => (
-  <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+const MessageBubble = ({ msg, isMe, isGroup, onReply }) => (
+  <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} group/bubble`}>
     <div className="max-w-[75%] space-y-1">
       {isGroup && !isMe && (
         <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider ml-1 mb-1">
           {msg.sender_name} <span className="text-slate-300">• {msg.sender_role}</span>
         </p>
       )}
-      <div className={`
-        px-4 py-3 rounded-2xl text-sm leading-relaxed
-        ${isMe 
-          ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-br-md shadow-sm shadow-indigo-100' 
-          : 'bg-white text-slate-700 rounded-bl-md border border-slate-100 shadow-sm'
-        }
-      `}>
-        {msg.content}
+      <div className="relative">
+        <div className={`
+          px-4 py-3 rounded-2xl text-sm leading-relaxed
+          ${isMe 
+            ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-br-md shadow-sm shadow-indigo-100' 
+            : 'bg-white text-slate-700 rounded-bl-md border border-slate-100 shadow-sm'
+          }
+        `}>
+          {msg.content}
+        </div>
+        
+        {/* Reply Action Button */}
+        <button 
+          onClick={onReply}
+          className={`
+            absolute top-1/2 -translate-y-1/2 p-2 bg-white rounded-full shadow-lg border border-slate-100 text-slate-400 hover:text-indigo-600 hover:scale-110 transition-all opacity-0 group-hover/bubble:opacity-100 z-10
+            ${isMe ? '-left-10' : '-right-10'}
+          `}
+        >
+          <Reply size={14} />
+        </button>
       </div>
       <div className={`flex items-center gap-1.5 text-[10px] font-medium text-slate-300 ${isMe ? 'justify-end pr-1' : 'pl-1'}`}>
         <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

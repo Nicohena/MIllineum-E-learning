@@ -10,14 +10,13 @@ import {
   LogOut,
   HelpCircle,
   ChevronDown,
+  MessageSquare,
+  BookOpen,
+  Award,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-const notificationsSeed = [
-  { id: 1, title: 'Assignment due tomorrow', time: '2h ago', link: '/student/assignments', read: false },
-  { id: 2, title: 'New class material uploaded', time: '5h ago', link: '/student/courses', read: false },
-  { id: 3, title: 'Grade updated in Web Dev', time: '1d ago', link: '/student/grades', read: true },
-];
+import notificationService from '../../services/notificationService';
 
 const quickLinks = [
   { label: 'Dashboard', link: '/dashboard' },
@@ -25,6 +24,7 @@ const quickLinks = [
   { label: 'Assignments', link: '/student/assignments' },
   { label: 'My Grades', link: '/student/grades' },
   { label: 'Messaging', link: '/student/messages' },
+  { label: 'Forum', link: '/student/forum' },
   { label: 'Profile', link: '/profile' },
   { label: 'Help Center', link: '/help' },
 ];
@@ -38,11 +38,29 @@ export const Topbar = ({ setSidebarOpen }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [notifications, setNotifications] = useState(notificationsSeed);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const searchRef = useRef(null);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000); // Poll every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await notificationService.getNotifications();
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unread_count || 0);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -66,8 +84,6 @@ export const Topbar = ({ setSidebarOpen }) => {
     return quickLinks.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()));
   }, [query]);
 
-  const unreadCount = notifications.filter((item) => !item.read).length;
-
   const pageTitle = useMemo(() => {
     const path = location.pathname;
     if (path === '/dashboard') return 'Dashboard';
@@ -82,17 +98,32 @@ export const Topbar = ({ setSidebarOpen }) => {
 
   const roleLabel = user?.role ? `${user.role.charAt(0).toUpperCase()}${user.role.slice(1)}` : 'User';
 
-  const onNotificationClick = (notification) => {
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === notification.id ? { ...item, read: true } : item))
-    );
+  const onNotificationClick = async (notif) => {
+    if (!notif.is_read) {
+      await notificationService.markAsRead(notif.id);
+      fetchNotifications();
+    }
     setShowNotifications(false);
-    navigate(notification.link);
+    if (notif.link) navigate(notif.link);
+  };
+
+  const handleMarkAllRead = async () => {
+    await notificationService.markAllAsRead();
+    fetchNotifications();
   };
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const getIcon = (type) => {
+    switch (type) {
+      case 'message': return <MessageSquare className="text-indigo-500" size={14} />;
+      case 'forum_reply': return <BookOpen className="text-emerald-500" size={14} />;
+      case 'assignment_graded': return <Award className="text-amber-500" size={14} />;
+      default: return <Bell className="text-slate-400" size={14} />;
+    }
   };
 
   return (
@@ -151,34 +182,63 @@ export const Topbar = ({ setSidebarOpen }) => {
               aria-label="Notifications"
             >
               <Bell size={19} />
-              {unreadCount > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-rose-500" />}
+              {unreadCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-4 w-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white ring-2 ring-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-800">Notifications</p>
-                  <button
-                    onClick={() => setNotifications((prev) => prev.map((item) => ({ ...item, read: true })))}
-                    className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
-                  >
-                    Mark all read
-                  </button>
+              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200 origin-top-right">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4 bg-slate-50/50">
+                  <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Notifications</p>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest"
+                    >
+                      Mark all read
+                    </button>
+                  )}
                 </div>
                 <div className="max-h-80 overflow-y-auto">
-                  {notifications.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => onNotificationClick(item)}
-                      className={`w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 ${
-                        !item.read ? 'bg-indigo-50/50' : 'bg-white'
-                      }`}
-                    >
-                      <p className="text-sm font-medium text-slate-800">{item.title}</p>
-                      <p className="text-xs text-slate-400 mt-1">{item.time}</p>
-                    </button>
-                  ))}
+                  {notifications.length === 0 ? (
+                    <div className="py-10 text-center px-6">
+                      <Bell className="mx-auto text-slate-200 mb-2" size={24} />
+                      <p className="text-xs font-bold text-slate-400">All caught up!</p>
+                    </div>
+                  ) : (
+                    notifications.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => onNotificationClick(item)}
+                        className={`w-full border-b border-slate-50 px-4 py-3.5 text-left transition hover:bg-slate-50 flex gap-3 ${
+                          !item.is_read ? 'bg-indigo-50/30' : 'bg-white'
+                        }`}
+                      >
+                        <div className={`mt-0.5 shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${!item.is_read ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                          {getIcon(item.type)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-xs tracking-tight truncate ${!item.is_read ? 'font-black text-slate-900' : 'font-medium text-slate-600'}`}>
+                            {item.title}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.content}</p>
+                          <p className="text-[9px] text-slate-300 font-bold uppercase tracking-wider mt-1">
+                            {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
+                <button 
+                  onClick={() => { navigate('/notifications'); setShowNotifications(false); }}
+                  className="w-full py-3 bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                >
+                  View All Notifications
+                </button>
               </div>
             )}
           </div>
@@ -188,72 +248,45 @@ export const Topbar = ({ setSidebarOpen }) => {
               onClick={() => setShowProfileMenu((prev) => !prev)}
               className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5 transition hover:bg-slate-50"
             >
-              <div className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-xs font-bold text-white">
+              <div className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-xs font-bold text-white shadow-sm">
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <ChevronDown size={15} className="text-slate-500" />
             </button>
 
             {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                <button
-                  onClick={() => {
-                    navigate('/notifications');
-                    setShowProfileMenu(false);
-                  }}
-                  className="w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50"
-                >
-                  <p className="text-sm font-semibold text-slate-800 truncate">{user?.name}</p>
-                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                  <p className="mt-1 text-[11px] font-medium text-indigo-600">Click name to open notifications</p>
-                </button>
-                <button
-                  onClick={() => {
-                    navigate('/notifications');
-                    setShowProfileMenu(false);
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Bell size={16} />
-                  Notifications
-                </button>
-                <button
-                  onClick={() => {
-                    navigate('/profile');
-                    setShowProfileMenu(false);
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <User size={16} />
-                  Profile
-                </button>
-                <button
-                  onClick={() => {
-                    navigate('/settings');
-                    setShowProfileMenu(false);
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Settings size={16} />
-                  Settings
-                </button>
-                <button
-                  onClick={() => {
-                    navigate('/help');
-                    setShowProfileMenu(false);
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <HelpCircle size={16} />
-                  Help Center
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
+              <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200 origin-top-right">
+                <div className="border-b border-slate-100 px-4 py-4 bg-slate-50/50">
+                  <p className="truncate text-xs font-black text-slate-900">{user?.name}</p>
+                  <p className="truncate text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{user?.role}</p>
+                </div>
+                <div className="p-1">
+                  {[
+                    { label: 'Notifications', icon: Bell, link: '/notifications' },
+                    { label: 'My Profile', icon: User, link: '/profile' },
+                    { label: 'Settings', icon: Settings, link: '/settings' },
+                    { label: 'Help Center', icon: HelpCircle, link: '/help' },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => {
+                        navigate(item.link);
+                        setShowProfileMenu(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-xs font-bold text-slate-600 transition rounded-xl hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      <item.icon size={16} className="text-slate-400" />
+                      {item.label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 border-t border-slate-50 mt-1 px-4 py-2.5 text-xs font-black text-rose-500 transition rounded-xl hover:bg-rose-50"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
               </div>
             )}
           </div>
