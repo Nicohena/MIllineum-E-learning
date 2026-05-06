@@ -14,7 +14,18 @@ class Message {
 
     public function sendGroupMessage($senderId, $classId, $content, $parentId = null) {
         $stmt = $this->db->prepare("INSERT INTO group_messages (sender_id, class_id, content, parent_id) VALUES (:s, :c, :content, :p)");
-        return $stmt->execute(['s' => $senderId, 'c' => $classId, 'content' => $content, 'p' => $parentId]);
+        $ok = $stmt->execute(['s' => $senderId, 'c' => $classId, 'content' => $content, 'p' => $parentId]);
+        if ($ok) {
+            $id = $this->db->lastInsertId();
+            $this->appendHistory('group_messages', $id, [
+                'sender_id' => $senderId,
+                'class_id' => $classId,
+                'content' => $content,
+                'parent_id' => $parentId
+            ]);
+            return $id;
+        }
+        return false;
     }
 
     public function getGroupMessages($classId) {
@@ -30,7 +41,33 @@ class Message {
 
     public function sendMessage($senderId, $receiverId, $content, $parentId = null) {
         $stmt = $this->db->prepare("INSERT INTO messages (sender_id, receiver_id, content, parent_id) VALUES (:s, :r, :c, :p)");
-        return $stmt->execute(['s' => $senderId, 'r' => $receiverId, 'c' => $content, 'p' => $parentId]);
+        $ok = $stmt->execute(['s' => $senderId, 'r' => $receiverId, 'c' => $content, 'p' => $parentId]);
+        if ($ok) {
+            $id = $this->db->lastInsertId();
+            $this->appendHistory('messages', $id, [
+                'sender_id' => $senderId,
+                'receiver_id' => $receiverId,
+                'content' => $content,
+                'parent_id' => $parentId
+            ]);
+            return $id;
+        }
+        return false;
+    }
+
+    private function appendHistory($table, $id, $payload) {
+        $dir = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'logs';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $file = $dir . DIRECTORY_SEPARATOR . 'message_history.log';
+        $entry = [
+            'table' => $table,
+            'id' => $id,
+            'payload' => $payload,
+            'timestamp' => date('c')
+        ];
+        file_put_contents($file, json_encode($entry) . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
     public function getConversations($userId) {

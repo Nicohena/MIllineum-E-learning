@@ -79,12 +79,18 @@ class Forum {
             INSERT INTO forum_threads (category_id, author_id, title, content) 
             VALUES (:cid, :aid, :title, :content)
         ");
-        return $stmt->execute([
-            'cid' => $categoryId,
-            'aid' => $authorId,
-            'title' => $title,
-            'content' => $content
-        ]);
+            $ok = $stmt->execute([
+                'cid' => $categoryId,
+                'aid' => $authorId,
+                'title' => $title,
+                'content' => $content
+            ]);
+            if ($ok) {
+                $id = $this->db->lastInsertId();
+                $this->appendHistory('forum_threads', $id, ['category_id' => $categoryId, 'author_id' => $authorId, 'title' => $title]);
+                return $id;
+            }
+            return false;
     }
 
     public function createReply($threadId, $authorId, $content) {
@@ -92,12 +98,33 @@ class Forum {
             INSERT INTO forum_replies (thread_id, author_id, content) 
             VALUES (:tid, :aid, :content)
         ");
-        return $stmt->execute([
-            'tid' => $threadId,
-            'aid' => $authorId,
-            'content' => $content
-        ]);
+            $ok = $stmt->execute([
+                'tid' => $threadId,
+                'aid' => $authorId,
+                'content' => $content
+            ]);
+            if ($ok) {
+                $id = $this->db->lastInsertId();
+                $this->appendHistory('forum_replies', $id, ['thread_id' => $threadId, 'author_id' => $authorId]);
+                return $id;
+            }
+            return false;
     }
+
+        private function appendHistory($table, $id, $payload) {
+            $dir = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'logs';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $file = $dir . DIRECTORY_SEPARATOR . 'forum_history.log';
+            $entry = [
+                'table' => $table,
+                'id' => $id,
+                'payload' => $payload,
+                'timestamp' => date('c')
+            ];
+            file_put_contents($file, json_encode($entry) . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
 
     public function togglePin($threadId) {
         $stmt = $this->db->prepare("UPDATE forum_threads SET is_pinned = NOT is_pinned WHERE id = :id");

@@ -101,20 +101,92 @@ class MessageController {
         if (!$user) return;
 
         $data = json_decode(file_get_contents('php://input'), true);
-        $receiverId = $data['receiver_id'];
+        $receiverId = $data['receiver_id'] ?? null;
         $parentId = $data['parent_id'] ?? null;
-        
-        if (strpos($receiverId, 'group_') === 0) {
-            $classId = substr($receiverId, 6);
-            $result = $this->messageModel->sendGroupMessage($user['id'], $classId, $data['content'], $parentId);
-        } else {
-            $result = $this->messageModel->sendMessage($user['id'], $receiverId, $data['content'], $parentId);
+        $content = isset($data['content']) ? trim($data['content']) : '';
+
+        if (!$receiverId || $content === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing receiver_id or content']);
+            return;
         }
 
-        if ($result) {
+        if (strlen($content) > 2000) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Content too long']);
+            return;
+        }
+
+        // sanitize
+        $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
+
+        // permission checks
+        $db = \Core\Database::getInstance()->getConnection();
+
+        if (strpos($receiverId, 'group_') === 0) {
+            $classId = substr($receiverId, 6);
+            // Ensure user belongs to class or is teacher of class
+            $ok = false;
+            if ($user['role'] === 'admin') {
+                $ok = true;
+            } else if ($user['role'] === 'student') {
+                $stmt = $db->prepare("SELECT class_id FROM users WHERE id = :id");
+                $stmt->execute(['id' => $user['id']]);
+                $u = $stmt->fetch();
+                if ($u && $u['class_id'] == $classId) $ok = true;
+            } else if ($user['role'] === 'teacher') {
+                $stmt = $db->prepare("SELECT 1 FROM class_assignments WHERE teacher_id = :tid AND class_id = :cid");
+                $stmt->execute(['tid' => $user['id'], 'cid' => $classId]);
+                if ($stmt->fetch()) $ok = true;
+            }
+
+            if (!$ok) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden to post in this group']);
+                return;
+            }
+
+            $resultId = $this->messageModel->sendGroupMessage($user['id'], $classId, $content, $parentId);
+        } else {
+            // private message: ensure receiver exists
+            $stmt = $db->prepare("SELECT id, class_id, role FROM users WHERE id = :id");
+            $stmt->execute(['id' => $receiverId]);
+            $rcv = $stmt->fetch();
+            if (!$rcv) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Receiver not found']);
+                return;
+            }
+
+            // permission: allow if admin, or in same class (students), or teacher-student relationship
+            $ok = false;
+            if ($user['role'] === 'admin') {
+                $ok = true;
+            } else if ($user['role'] === 'student') {
+                if ($rcv['role'] === 'student' && $rcv['class_id'] == $user['class_id']) $ok = true;
+                // allow messaging assigned teacher
+                $stmt = $db->prepare("SELECT 1 FROM class_assignments WHERE teacher_id = :tid AND class_id = :cid");
+                $stmt->execute(['tid' => $rcv['id'], 'cid' => $user['class_id']]);
+                if ($stmt->fetch()) $ok = true;
+            } else if ($user['role'] === 'teacher') {
+                // teacher can message students in their classes
+                $stmt = $db->prepare("SELECT u.id FROM users u JOIN class_assignments ca ON ca.class_id = u.class_id WHERE ca.teacher_id = :tid AND u.id = :sid");
+                $stmt->execute(['tid' => $user['id'], 'sid' => $receiverId]);
+                if ($stmt->fetch()) $ok = true;
+            }
+
+            if (!$ok) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden to message this user']);
+                return;
+            }
+
+            $resultId = $this->messageModel->sendMessage($user['id'], $receiverId, $content, $parentId);
+        }
+
+        if ($resultId) {
             // Create notification for receiver
             $notificationModel = new \Models\Notification();
-            
             if ($parentId) {
                 // Threaded reply - Notify original message sender
                 $parentMsg = $this->messageModel->getMessageById($parentId, strpos($receiverId, 'group_') !== false);
@@ -129,15 +201,17 @@ class MessageController {
                 }
             } else if (strpos($receiverId, 'group_') === false) {
                 // Direct private message
+                $preview = substr($content, 0, 50) . (strlen($content) > 50 ? '...' : '');
                 $notificationModel->create(
                     $receiverId,
                     'message',
                     'New Message',
-                    $user['name'] . ' sent you a message: ' . substr($data['content'], 0, 50) . (strlen($data['content']) > 50 ? '...' : ''),
+                    $user['name'] . ' sent you a message: ' . $preview,
                     '/student/messages'
                 );
             }
-            echo json_encode(['status' => 'success']);
+
+            echo json_encode(['status' => 'success', 'message_id' => $resultId]);
         } else {
             http_response_code(500);
         }
