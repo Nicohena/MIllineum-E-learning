@@ -4,12 +4,12 @@ import {
   Phone, Video, Plus, 
   CheckCheck, Check,
   MessageSquare, Loader2, ChevronLeft,
-  BookOpen, Smile, Paperclip
+  GraduationCap, Smile, Paperclip, Image
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import messageService from '../../services/messageService';
 
-const Messaging = () => {
+const TeacherMessaging = () => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
@@ -283,13 +283,13 @@ const Messaging = () => {
                 <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-3xl flex items-center justify-center">
                   <MessageSquare size={36} className="text-indigo-500" />
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
-                  <BookOpen size={16} className="text-white" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-200">
+                  <GraduationCap size={16} className="text-white" />
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Millennium Messenger</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">Teacher Messaging</h2>
               <p className="text-slate-400 font-medium text-sm max-w-xs leading-relaxed">
-                Select a conversation or start a new chat with your teachers and classmates.
+                Select a conversation or start a new chat with your students and class groups.
               </p>
             </div>
           )}
@@ -374,4 +374,4 @@ const MessageBubble = ({ msg, isMe, isGroup }) => (
   </div>
 );
 
-export default Messaging;
+export default TeacherMessaging;

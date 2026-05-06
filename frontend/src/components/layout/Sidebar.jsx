@@ -112,7 +112,7 @@ export const Sidebar = ({ isOpen, setOpen }) => {
             { to: '/teacher/assignments', icon: ClipboardList, label: 'Assignments' },
             { to: '/teacher/live-classes', icon: Video, label: 'Live Classes' },
             { to: '/teacher/grading', icon: BarChart3, label: 'Grading' },
-            { to: '/teacher/forum', icon: MessageSquare, label: 'Messages', badge: '3' },
+            { to: '/teacher/messages', icon: MessageSquare, label: 'Messages', badge: '3' },
           ],
         },
       ];
