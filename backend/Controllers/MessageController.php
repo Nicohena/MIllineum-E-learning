@@ -112,6 +112,31 @@ class MessageController {
         }
 
         if ($result) {
+            // Create notification for receiver
+            $notificationModel = new \Models\Notification();
+            
+            if ($parentId) {
+                // Threaded reply - Notify original message sender
+                $parentMsg = $this->messageModel->getMessageById($parentId, strpos($receiverId, 'group_') !== false);
+                if ($parentMsg && $parentMsg['sender_id'] != $user['id']) {
+                    $notificationModel->create(
+                        $parentMsg['sender_id'],
+                        'message_thread',
+                        'New Thread Reply',
+                        $user['name'] . ' replied to your message in a thread.',
+                        '/student/messages'
+                    );
+                }
+            } else if (strpos($receiverId, 'group_') === false) {
+                // Direct private message
+                $notificationModel->create(
+                    $receiverId,
+                    'message',
+                    'New Message',
+                    $user['name'] . ' sent you a message: ' . substr($data['content'], 0, 50) . (strlen($data['content']) > 50 ? '...' : ''),
+                    '/student/messages'
+                );
+            }
             echo json_encode(['status' => 'success']);
         } else {
             http_response_code(500);

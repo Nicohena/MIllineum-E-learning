@@ -255,6 +255,17 @@ switch ($resource) {
         }
         break;
 
+    case 'notifications':
+        $controller = new \Controllers\NotificationController();
+        if ($id === 'list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getNotifications();
+        } elseif ($id === 'mark-read' && $uri_parts[$api_index + 2] && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->markRead($uri_parts[$api_index + 2]);
+        } elseif ($id === 'mark-all-read' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->markAllRead();
+        }
+        break;
+
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Resource not found: ' . $resource]);

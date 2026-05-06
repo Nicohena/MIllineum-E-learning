@@ -81,6 +81,13 @@ class Message {
     public function getUnreadCount($userId) {
         $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM messages WHERE receiver_id = :uid AND is_read = 0");
         $stmt->execute(['uid' => $userId]);
-        return $stmt->fetch()['count'];
+        return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
+
+    public function getMessageById($id, $isGroup = false) {
+        $table = $isGroup ? 'group_messages' : 'messages';
+        $stmt = $this->db->prepare("SELECT * FROM $table WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }

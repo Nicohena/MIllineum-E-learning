@@ -96,6 +96,18 @@ class ForumController {
         );
 
         if ($result) {
+            // Create notification for thread author
+            $thread = $this->forumModel->getThread($data['thread_id']);
+            if ($thread && $thread['author_id'] != $user['id']) {
+                $notificationModel = new \Models\Notification();
+                $notificationModel->create(
+                    $thread['author_id'],
+                    'forum_reply',
+                    'New Forum Reply',
+                    $user['name'] . ' replied to your topic: ' . $thread['title'],
+                    ($thread['author_role'] === 'student' ? '/student/forum' : '/teacher/forum')
+                );
+            }
             echo json_encode(['status' => 'success', 'message' => 'Reply added']);
         } else {
             http_response_code(500);
