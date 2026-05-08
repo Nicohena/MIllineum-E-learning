@@ -31,6 +31,17 @@ const studentService = {
   getGrades: async () => {
     const response = await api.get('/student/grades');
     return response.data.grades || [];
+  },
+
+  /**
+   * Get student's attendance records
+   */
+  getAttendance: async (month, year, courseId = null) => {
+    const params = new URLSearchParams({ month, year });
+    if (courseId) params.append('course_id', courseId);
+
+    const response = await api.get(`/attendance/my?${params}`);
+    return response.data;
   }
 };
 

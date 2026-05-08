@@ -221,6 +221,20 @@ switch ($resource) {
             $controller->deleteSession();
         }
         break;
+
+    case 'attendance':
+        $controller = new \Controllers\AttendanceController();
+        if ($id === 'mark' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->markAttendance();
+        } elseif ($id === 'session' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getSessionAttendance();
+        } elseif ($id === 'my' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getMyAttendance();
+        } elseif ($id === 'bulk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->bulkMarkAttendance();
+        }
+        break;
+
     case 'forum':
         $controller = new \Controllers\ForumController();
         if ($id === 'categories' && $_SERVER['REQUEST_METHOD'] === 'GET') {

@@ -149,3 +149,23 @@ CREATE TABLE IF NOT EXISTS live_class_sessions (
     INDEX idx_live_class_teacher (teacher_id),
     INDEX idx_live_class_status (status)
 ) ENGINE=InnoDB;
+
+-- 11. Attendance Table
+CREATE TABLE IF NOT EXISTS attendance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT NOT NULL,
+    student_id INT NOT NULL,
+    status ENUM('present', 'absent', 'late') NOT NULL,
+    marked_by INT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (session_id) REFERENCES live_class_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE CASCADE,
+
+    UNIQUE KEY unique_attendance (session_id, student_id),
+    INDEX idx_attendance_session (session_id),
+    INDEX idx_attendance_student (student_id),
+    INDEX idx_attendance_timestamp (timestamp)
+) ENGINE=InnoDB;
