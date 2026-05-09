@@ -52,6 +52,12 @@ const userService = {
    */
   updateStatus: async (userId, status) => {
     try {
+      if (!userId) {
+        throw new Error('userId is required');
+      }
+      if (!status) {
+        throw new Error('status is required');
+      }
       const response = await api.put('/admin/users', { user_id: userId, status });
       return response.data;
     } catch (error) {
@@ -65,6 +71,12 @@ const userService = {
    */
   resetPassword: async (userId, password) => {
     try {
+      if (!userId) {
+        throw new Error('userId is required');
+      }
+      if (!password) {
+        throw new Error('password is required');
+      }
       const response = await api.post('/admin/reset-password', { user_id: userId, password });
       return response.data;
     } catch (error) {
@@ -78,6 +90,9 @@ const userService = {
    */
   deleteUser: async (userId) => {
     try {
+      if (!userId) {
+        throw new Error('userId is required');
+      }
       const response = await api.delete(`/admin/users?id=${userId}`);
       return response.data;
     } catch (error) {

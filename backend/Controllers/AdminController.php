@@ -32,6 +32,11 @@ class AdminController {
 
     /**
      * Verify if the request is from an Admin
+     * 
+     * 
+     * 
+     * 
+     * 
      */
     private function verifyAdmin() {
         $authHeader = $this->getAuthorizationHeader();
@@ -852,12 +857,14 @@ class AdminController {
     public function updateUserStatus() {
         if (!$this->verifyAdmin()) {
             http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
             return;
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
         if (empty($data['user_id']) || empty($data['status'])) {
             http_response_code(400);
+            echo json_encode(['error' => 'User ID and status are required']);
             return;
         }
 
@@ -865,6 +872,7 @@ class AdminController {
             echo json_encode(['status' => 'success']);
         } else {
             http_response_code(500);
+            echo json_encode(['error' => 'Failed to update user status']);
         }
     }
 
@@ -916,12 +924,14 @@ class AdminController {
     public function deleteUser() {
         if (!$this->verifyAdmin()) {
             http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
             return;
         }
 
         $id = $_GET['id'] ?? null;
         if (!$id) {
             http_response_code(400);
+            echo json_encode(['error' => 'User ID is required']);
             return;
         }
 
@@ -929,6 +939,7 @@ class AdminController {
             echo json_encode(['status' => 'success']);
         } else {
             http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete user']);
         }
     }
 }
