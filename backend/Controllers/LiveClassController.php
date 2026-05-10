@@ -85,6 +85,57 @@ class LiveClassController {
 
         $duration = max(15, (int) ($data['duration_minutes'] ?? 60));
         $scheduledAt = str_replace('T', ' ', $data['scheduled_at']);
+        if (!strtotime($scheduledAt)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid scheduled_at datetime']);
+            return;
+        }
+
+        // Validate timetable conflicts (teacher + class time overlap)
+        $teacherConflict = $this->sessionModel->hasTeacherTimeConflict($teacher['id'], $scheduledAt, $duration);
+        if ($teacherConflict) {
+            http_response_code(409);
+            echo json_encode([
+                'error' => 'Timetable conflict: teacher already has a live class scheduled in this time window',
+                'conflict' => [
+                    'type' => 'teacher',
+                    'session_id' => $teacherConflict['id'] ?? null,
+                    'scheduled_at' => $teacherConflict['scheduled_at'] ?? null,
+                    'duration_minutes' => $teacherConflict['duration_minutes'] ?? null,
+                    'status' => $teacherConflict['status'] ?? null,
+                ],
+            ]);
+            return;
+        }
+
+        $classId = null;
+        try {
+            $stmt = $this->db->prepare("SELECT class_id FROM courses WHERE id = :course_id LIMIT 1");
+            $stmt->execute(['course_id' => $data['course_id']]);
+            $classId = $stmt->fetchColumn();
+        } catch (\Exception $e) {
+            $classId = null;
+        }
+
+        if (!empty($classId)) {
+            $classConflict = $this->sessionModel->hasClassTimeConflict($classId, $scheduledAt, $duration);
+            if ($classConflict) {
+                http_response_code(409);
+                echo json_encode([
+                    'error' => 'Timetable conflict: this class already has a live class scheduled in this time window',
+                    'conflict' => [
+                        'type' => 'class',
+                        'session_id' => $classConflict['id'] ?? null,
+                        'scheduled_at' => $classConflict['scheduled_at'] ?? null,
+                        'duration_minutes' => $classConflict['duration_minutes'] ?? null,
+                        'status' => $classConflict['status'] ?? null,
+                        'course_title' => $classConflict['course_title'] ?? null,
+                    ],
+                ]);
+                return;
+            }
+        }
+
         $sessionId = $this->sessionModel->create(
             $data['course_id'],
             $teacher['id'],

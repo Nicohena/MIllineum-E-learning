@@ -33,6 +33,67 @@ class LiveClassSession {
         return false;
     }
 
+    /**
+     * Check if a teacher already has a live class overlapping the proposed time window.
+     * Overlap rule: existing_start < new_end AND existing_end > new_start
+     */
+    public function hasTeacherTimeConflict($teacherId, $scheduledAt, $durationMinutes, $ignoreSessionId = null) {
+        $sql = "SELECT lcs.*
+                FROM {$this->table} lcs
+                WHERE lcs.teacher_id = :teacher_id
+                  AND lcs.status IN ('scheduled', 'live')
+                  AND lcs.scheduled_at < DATE_ADD(:scheduled_at, INTERVAL :duration_minutes MINUTE)
+                  AND DATE_ADD(lcs.scheduled_at, INTERVAL lcs.duration_minutes MINUTE) > :scheduled_at";
+
+        $params = [
+            'teacher_id' => $teacherId,
+            'scheduled_at' => $scheduledAt,
+            'duration_minutes' => (int) $durationMinutes,
+        ];
+
+        if ($ignoreSessionId !== null) {
+            $sql .= " AND lcs.id <> :ignore_session_id";
+            $params['ignore_session_id'] = (int) $ignoreSessionId;
+        }
+
+        $sql .= " ORDER BY lcs.scheduled_at ASC LIMIT 1";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch();
+    }
+
+    /**
+     * Check if a class already has a live class overlapping the proposed time window.
+     * Uses courses.class_id to map session -> class.
+     */
+    public function hasClassTimeConflict($classId, $scheduledAt, $durationMinutes, $ignoreSessionId = null) {
+        $sql = "SELECT lcs.*, c.title AS course_title, c.class_id
+                FROM {$this->table} lcs
+                JOIN courses c ON lcs.course_id = c.id
+                WHERE c.class_id = :class_id
+                  AND lcs.status IN ('scheduled', 'live')
+                  AND lcs.scheduled_at < DATE_ADD(:scheduled_at, INTERVAL :duration_minutes MINUTE)
+                  AND DATE_ADD(lcs.scheduled_at, INTERVAL lcs.duration_minutes MINUTE) > :scheduled_at";
+
+        $params = [
+            'class_id' => $classId,
+            'scheduled_at' => $scheduledAt,
+            'duration_minutes' => (int) $durationMinutes,
+        ];
+
+        if ($ignoreSessionId !== null) {
+            $sql .= " AND lcs.id <> :ignore_session_id";
+            $params['ignore_session_id'] = (int) $ignoreSessionId;
+        }
+
+        $sql .= " ORDER BY lcs.scheduled_at ASC LIMIT 1";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch();
+    }
+
     public function findById($id) {
         $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id LIMIT 1");
         $stmt->execute(['id' => $id]);
