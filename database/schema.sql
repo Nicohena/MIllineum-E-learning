@@ -169,3 +169,26 @@ CREATE TABLE IF NOT EXISTS attendance (
     INDEX idx_attendance_student (student_id),
     INDEX idx_attendance_timestamp (timestamp)
 ) ENGINE=InnoDB;
+
+-- 12. Audit Logs (who changed what and when)
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    actor_id INT NULL,
+    actor_role VARCHAR(20) NULL,
+    action VARCHAR(120) NOT NULL,
+    entity_type VARCHAR(80) NULL,
+    entity_id INT NULL,
+    details JSON NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(255) NULL,
+    request_method VARCHAR(10) NULL,
+    request_path VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_audit_actor (actor_id),
+    INDEX idx_audit_entity (entity_type, entity_id),
+    INDEX idx_audit_action (action),
+    INDEX idx_audit_created (created_at),
+
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;

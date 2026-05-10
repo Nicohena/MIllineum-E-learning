@@ -8,6 +8,7 @@ use Models\Assignment;
 use Models\User;
 use Models\AcademicYear;
 use Models\Course;
+use Models\AuditLog;
 use Core\JwtHandler;
 use Core\Database;
 
@@ -18,6 +19,7 @@ class AdminController {
     private $userModel;
     private $yearModel;
     private $courseModel;
+    private $auditLog;
     private $db;
 
     public function __construct() {
@@ -27,6 +29,7 @@ class AdminController {
         $this->userModel = new User();
         $this->yearModel = new AcademicYear();
         $this->courseModel = new Course();
+        $this->auditLog = new AuditLog();
         $this->db = Database::getInstance()->getConnection();
     }
 
@@ -169,7 +172,8 @@ class AdminController {
      * Create a new class
      */
     public function createClass() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -236,6 +240,12 @@ class AdminController {
 
             $this->db->commit();
 
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'class.create', 'class', $classId, [
+                'name' => $data['name'],
+                'assigned_students' => $studentIds,
+                'academic_year_id' => $activeYear['id'] ?? null,
+            ]);
+
             echo json_encode([
                 'status' => 'success',
                 'class_id' => $classId,
@@ -256,7 +266,8 @@ class AdminController {
      * Create a new subject
      */
     public function createSubject() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -310,6 +321,11 @@ class AdminController {
             }
 
             $this->db->commit();
+
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'subject.create', 'subject', $result, [
+                'name' => $data['name'],
+                'assigned_teachers' => $teacherIds,
+            ]);
             echo json_encode([
                 'status' => 'success',
                 'subject_id' => $result,
@@ -329,7 +345,8 @@ class AdminController {
      * Add one or more teachers to a subject specialization.
      */
     public function addTeachersToSubject() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -376,6 +393,11 @@ class AdminController {
             }
         }
 
+        $this->auditLog->log($admin['id'] ?? null, 'admin', 'subject.teachers.add', 'subject', (int)$subjectId, [
+            'subject_name' => $subject['name'] ?? null,
+            'teacher_ids' => $teacherIds,
+        ]);
+
         echo json_encode([
             'status' => 'success',
             'message' => 'Teachers assigned to subject successfully',
@@ -387,7 +409,8 @@ class AdminController {
      * Remove a teacher from a subject specialization.
      */
     public function removeTeacherFromSubject() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -429,6 +452,11 @@ class AdminController {
             return;
         }
 
+        $this->auditLog->log($admin['id'] ?? null, 'admin', 'subject.teacher.remove', 'subject', (int)$subjectId, [
+            'subject_name' => $subject['name'] ?? null,
+            'teacher_id' => (int)$teacherId,
+        ]);
+
         echo json_encode([
             'status' => 'success',
             'message' => 'Teacher removed from subject successfully'
@@ -439,7 +467,8 @@ class AdminController {
      * Delete a class
      */
     public function deleteClass() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -470,6 +499,9 @@ class AdminController {
         }
 
         if ($this->classModel->delete($id)) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'class.delete', 'class', (int)$id, [
+                'name' => $class['name'] ?? null,
+            ]);
             echo json_encode(['status' => 'success', 'message' => 'Class deleted successfully']);
         } else {
             http_response_code(500);
@@ -481,7 +513,8 @@ class AdminController {
      * Delete a subject
      */
     public function deleteSubject() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -512,6 +545,9 @@ class AdminController {
         }
 
         if ($this->subjectModel->delete($id)) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'subject.delete', 'subject', (int)$id, [
+                'name' => $subject['name'] ?? null,
+            ]);
             echo json_encode(['status' => 'success', 'message' => 'Subject deleted successfully']);
         } else {
             http_response_code(500);
@@ -523,7 +559,8 @@ class AdminController {
      * Assign a teacher to a class and subject
      */
     public function assignTeacher() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -593,6 +630,13 @@ class AdminController {
                     $this->courseModel->create($courseTitle, $data['teacher_id'], $data['class_id']);
                 }
 
+                $this->auditLog->log($admin['id'] ?? null, 'admin', 'assignment.create', 'class_assignment', null, [
+                    'class_id' => (int)$data['class_id'],
+                    'subject_id' => (int)$data['subject_id'],
+                    'teacher_id' => (int)$data['teacher_id'],
+                    'academic_year_id' => (int)$activeYear['id'],
+                ]);
+
                 echo json_encode(['status' => 'success', 'message' => 'Teacher assigned successfully and course area created']);
             }
         } catch (\PDOException $e) {
@@ -609,7 +653,8 @@ class AdminController {
      * Assign a student to a specific class
      */
     public function assignStudentToClass() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden: Admin access only']);
             return;
@@ -640,6 +685,12 @@ class AdminController {
         if ($result) {
             // Also update the static class_id in users for current reference
             $this->userModel->assignToClass($data['student_id'], $data['class_id']);
+
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'student.assign_to_class', 'user', (int)$data['student_id'], [
+                'class_id' => (int)$data['class_id'],
+                'academic_year_id' => (int)$activeYear['id'],
+            ]);
+
             echo json_encode(['status' => 'success', 'message' => 'Student enrolled in class for the current academic year']);
         } else {
             http_response_code(500);
@@ -651,7 +702,8 @@ class AdminController {
      * Create a new academic year
      */
     public function createYear() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
             return;
@@ -688,6 +740,9 @@ class AdminController {
             }
 
             echo json_encode(['status' => 'success', 'year_id' => $result]);
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'academic_year.create', 'academic_year', (int)$result, [
+                'name' => $yearName,
+            ]);
         } catch (\PDOException $e) {
             if ((int)$e->getCode() === 23000) {
                 http_response_code(409);
@@ -704,7 +759,8 @@ class AdminController {
      * Set the current active academic year
      */
     public function setActiveYear() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
             return;
@@ -731,6 +787,7 @@ class AdminController {
         }
 
         if ($this->yearModel->setActive($yearId)) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'academic_year.set_active', 'academic_year', (int)$yearId);
             echo json_encode(['status' => 'success', 'message' => 'Academic year updated successfully']);
         } else {
             http_response_code(500);
@@ -742,7 +799,8 @@ class AdminController {
      * Delete an academic year when it has no linked records.
      */
     public function deleteYear() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
             return;
@@ -780,6 +838,9 @@ class AdminController {
         }
 
         if ($this->yearModel->delete($id)) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'academic_year.delete', 'academic_year', (int)$id, [
+                'name' => $year['name'] ?? null,
+            ]);
             echo json_encode(['status' => 'success', 'message' => 'Academic year deleted successfully']);
         } else {
             http_response_code(500);
@@ -820,7 +881,8 @@ class AdminController {
      * Create a new user (Admin-side)
      */
     public function createUser() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
             return;
@@ -844,6 +906,11 @@ class AdminController {
         
         $result = $this->userModel->create($data);
         if ($result) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'user.create', 'user', (int)$result, [
+                'name' => $data['name'] ?? null,
+                'email' => $data['email'] ?? null,
+                'role' => $data['role'] ?? null,
+            ]);
             echo json_encode(['status' => 'success', 'user_id' => $result]);
         } else {
             http_response_code(500);
@@ -855,7 +922,8 @@ class AdminController {
      * Update user status
      */
     public function updateUserStatus() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
             return;
@@ -869,6 +937,9 @@ class AdminController {
         }
 
         if ($this->userModel->updateStatus($data['user_id'], $data['status'])) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'user.update_status', 'user', (int)$data['user_id'], [
+                'status' => (string)$data['status'],
+            ]);
             echo json_encode(['status' => 'success']);
         } else {
             http_response_code(500);
@@ -880,7 +951,8 @@ class AdminController {
      * Reset a user's password
      */
     public function resetUserPassword() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
             return;
@@ -908,6 +980,7 @@ class AdminController {
 
         $passwordHash = password_hash($data['password'], PASSWORD_DEFAULT);
         if ($this->userModel->updatePassword($data['user_id'], $passwordHash)) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'user.reset_password', 'user', (int)$data['user_id']);
             echo json_encode([
                 'status' => 'success',
                 'message' => 'Password reset successfully'
@@ -922,7 +995,8 @@ class AdminController {
      * Delete a user
      */
     public function deleteUser() {
-        if (!$this->verifyAdmin()) {
+        $admin = $this->verifyAdmin();
+        if (!$admin) {
             http_response_code(403);
             echo json_encode(['error' => 'Forbidden']);
             return;
@@ -935,7 +1009,12 @@ class AdminController {
             return;
         }
 
+        $user = $this->userModel->findById($id);
         if ($this->userModel->delete($id)) {
+            $this->auditLog->log($admin['id'] ?? null, 'admin', 'user.delete', 'user', (int)$id, [
+                'email' => $user['email'] ?? null,
+                'role' => $user['role'] ?? null,
+            ]);
             echo json_encode(['status' => 'success']);
         } else {
             http_response_code(500);
