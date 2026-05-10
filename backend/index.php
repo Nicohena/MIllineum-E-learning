@@ -127,6 +127,8 @@ switch ($resource) {
             $controller->deleteYear();
         } elseif ($id === 'assignments' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             $controller->listAssignments();
+        } elseif ($id === 'audit-logs' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->listAuditLogs();
         } elseif ($id === 'assign' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $controller->assignTeacher();
         } elseif ($id === 'assign-student' && $_SERVER['REQUEST_METHOD'] === 'POST') {

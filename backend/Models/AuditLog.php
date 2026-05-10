@@ -47,5 +47,73 @@ class AuditLog {
             'request_path' => $path,
         ]);
     }
+
+    /**
+     * Paginated audit log listing for admin review (optional filters).
+     *
+     * @param array $filters Keys: action (string), actor_id (int), entity_type (string)
+     */
+    public function countFiltered(array $filters) {
+        [$whereSql, $params] = $this->buildFilterClause($filters);
+        $sql = "SELECT COUNT(*) FROM {$this->table} al {$whereSql}";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listFilteredWithActor(array $filters, $page, $perPage) {
+        [$whereSql, $params] = $this->buildFilterClause($filters);
+        $offset = max(0, ((int) $page - 1) * (int) $perPage);
+
+        $sql = "SELECT al.*, u.name AS actor_name, u.email AS actor_email
+                FROM {$this->table} al
+                LEFT JOIN users u ON al.actor_id = u.id
+                {$whereSql}
+                ORDER BY al.created_at DESC, al.id DESC
+                LIMIT " . (int) $perPage . " OFFSET " . (int) $offset;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        foreach ($rows as &$row) {
+            if (array_key_exists('details', $row) && $row['details'] !== null && $row['details'] !== '') {
+                $decoded = json_decode((string) $row['details'], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $row['details'] = $decoded;
+                }
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private function buildFilterClause(array $filters) {
+        $where = ['1=1'];
+        $params = [];
+
+        if (!empty($filters['action'])) {
+            $where[] = 'al.action = :filter_action';
+            $params['filter_action'] = (string) $filters['action'];
+        }
+
+        if (!empty($filters['actor_id'])) {
+            $where[] = 'al.actor_id = :filter_actor_id';
+            $params['filter_actor_id'] = (int) $filters['actor_id'];
+        }
+
+        if (!empty($filters['entity_type'])) {
+            $where[] = 'al.entity_type = :filter_entity_type';
+            $params['filter_entity_type'] = (string) $filters['entity_type'];
+        }
+
+        return ['WHERE ' . implode(' AND ', $where), $params];
+    }
 }
 

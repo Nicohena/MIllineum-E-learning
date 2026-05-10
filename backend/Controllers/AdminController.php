@@ -169,6 +169,55 @@ class AdminController {
     }
 
     /**
+     * Paginated audit log for reviewing recorded admin/teacher actions.
+     */
+    public function listAuditLogs() {
+        if (!$this->verifyAdmin()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden: Admin access only']);
+            return;
+        }
+
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = max(1, min(100, (int)($_GET['per_page'] ?? 25)));
+
+        $filters = [];
+        $action = trim((string)($_GET['action'] ?? ''));
+        if ($action !== '') {
+            $filters['action'] = $action;
+        }
+        $entityType = trim((string)($_GET['entity_type'] ?? ''));
+        if ($entityType !== '') {
+            $filters['entity_type'] = $entityType;
+        }
+        if (!empty($_GET['actor_id']) && is_numeric($_GET['actor_id'])) {
+            $filters['actor_id'] = (int) $_GET['actor_id'];
+        }
+
+        try {
+            $total = $this->auditLog->countFiltered($filters);
+            $logs = $this->auditLog->listFilteredWithActor($filters, $page, $perPage);
+        } catch (\PDOException $e) {
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Audit logs unavailable. Ensure the audit_logs table exists (run database/schema.sql updates).',
+            ]);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'logs' => $logs,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'total_pages' => $perPage > 0 ? (int) ceil($total / $perPage) : 0,
+            ],
+        ]);
+    }
+
+    /**
      * Create a new class
      */
     public function createClass() {
