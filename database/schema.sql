@@ -169,3 +169,28 @@ CREATE TABLE IF NOT EXISTS attendance (
     INDEX idx_attendance_student (student_id),
     INDEX idx_attendance_timestamp (timestamp)
 ) ENGINE=InnoDB;
+
+-- 12. Timetable Entries
+CREATE TABLE IF NOT EXISTS timetable_entries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    teacher_id INT NOT NULL,
+    academic_year_id INT NOT NULL,
+    day_of_week ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday') NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    room VARCHAR(100) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (academic_year_id) REFERENCES academic_years(id) ON DELETE CASCADE,
+
+    INDEX idx_timetable_class_day (class_id, day_of_week),
+    INDEX idx_timetable_teacher_day (teacher_id, day_of_week),
+    INDEX idx_timetable_year (academic_year_id)
+) ENGINE=InnoDB;
