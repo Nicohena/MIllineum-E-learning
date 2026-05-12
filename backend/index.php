@@ -319,6 +319,17 @@ switch ($resource) {
         }
         break;
 
+    case 'help':
+        $controller = new \Controllers\HelpController();
+        if ($id === 'faqs' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getFAQs();
+        } elseif ($id === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->submitQuery();
+        } elseif ($id === 'queries' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getQueries();
+        }
+        break;
+
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Resource not found: ' . $resource]);

@@ -251,3 +251,29 @@ CREATE TABLE IF NOT EXISTS notifications (
     INDEX idx_notification_read (is_read),
     INDEX idx_notification_created (created_at)
 ) ENGINE=InnoDB;
+
+-- 14. FAQs Table
+CREATE TABLE IF NOT EXISTS faqs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    question VARCHAR(1000) NOT NULL,
+    answer TEXT NOT NULL,
+    category VARCHAR(100) DEFAULT 'general',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 15. Help Queries (user submitted questions)
+CREATE TABLE IF NOT EXISTS help_queries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT DEFAULT NULL,
+    user_name VARCHAR(255) DEFAULT NULL,
+    user_email VARCHAR(255) DEFAULT NULL,
+    category VARCHAR(100) DEFAULT 'general',
+    question TEXT NOT NULL,
+    status ENUM('open','in_progress','closed') DEFAULT 'open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_help_category (category),
+    INDEX idx_help_status (status),
+    INDEX idx_help_created (created_at)
+) ENGINE=InnoDB;

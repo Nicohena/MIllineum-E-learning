@@ -1,10 +1,27 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import helpService from '../../services/helpService';
 import { modulePageMockData } from '../../services/mock/modulePagesMockData';
 
 const HelpCenter = () => {
   const [query, setQuery] = useState('');
   const helpCenter = modulePageMockData.helpCenter;
+  const [faqs, setFaqs] = useState([]);
+  const [category, setCategory] = useState('general');
+  const [questionText, setQuestionText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    helpService.getFAQs().then((data) => {
+      if (mounted && Array.isArray(data)) setFaqs(data);
+    }).catch(() => {
+      // fallback to mock FAQs if API fails
+      if (mounted) setFaqs(modulePageMockData.helpCenter.faqs || []);
+    });
+    return () => { mounted = false; };
+  }, []);
 
   const filteredGuides = useMemo(() => {
     if (!query.trim()) return helpCenter.guides;
@@ -65,6 +82,48 @@ const HelpCenter = () => {
       </section>
 
       <div className="grid gap-4">
+        <div className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-slate-900">Frequently Asked Questions</h2>
+          <div className="mt-4 grid gap-3">
+            {faqs.length > 0 ? faqs.map((f) => (
+              <details key={f.id} className="group rounded-lg border p-4">
+                <summary className="cursor-pointer font-semibold">{f.question}</summary>
+                <div className="mt-2 text-sm text-slate-600">{f.answer}</div>
+              </details>
+            )) : (
+              <p className="text-sm text-slate-500">No FAQs available yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-slate-900">Ask a Question</h2>
+          <p className="text-sm text-slate-500 mt-2">Submit a question and our team will respond. Choose a category to help us triage.</p>
+          <div className="mt-4 grid gap-3 max-w-xl">
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded border px-3 py-2">
+              <option value="general">General</option>
+              <option value="account">Account</option>
+              <option value="courses">Courses</option>
+              <option value="technical">Technical</option>
+              <option value="billing">Billing</option>
+            </select>
+            <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={4} placeholder="Describe your question..." className="rounded border p-3" />
+            <div className="flex items-center gap-3">
+              <button onClick={async () => {
+                if (!questionText.trim()) return setSubmitMsg('Please enter a question');
+                setSubmitting(true); setSubmitMsg(null);
+                try {
+                  await helpService.submitQuery({ category, question: questionText });
+                  setSubmitMsg('Question submitted successfully');
+                  setQuestionText('');
+                } catch (err) {
+                  setSubmitMsg('Failed to submit question');
+                } finally { setSubmitting(false); }
+              }} className="rounded bg-indigo-600 text-white px-4 py-2">{submitting ? 'Sending...' : 'Submit'}</button>
+              {submitMsg && <p className="text-sm text-slate-600">{submitMsg}</p>}
+            </div>
+          </div>
+        </div>
         {filteredArticles.length > 0 ? (
           filteredArticles.map((article) => (
             <article key={article.id} className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm transition hover:border-indigo-200">
