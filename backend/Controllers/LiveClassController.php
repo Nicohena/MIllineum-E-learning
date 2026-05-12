@@ -5,14 +5,17 @@ namespace Controllers;
 use Core\Database;
 use Core\JwtHandler;
 use Models\LiveClassSession;
+use Models\AuditLog;
 
 class LiveClassController {
     private $db;
     private $sessionModel;
+    private $auditLog;
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
         $this->sessionModel = new LiveClassSession();
+        $this->auditLog = new AuditLog();
     }
 
     private function auth($requiredRole = null) {
@@ -147,6 +150,11 @@ class LiveClassController {
         );
 
         if ($sessionId) {
+            $this->auditLog->log($teacher['id'] ?? null, 'teacher', 'live_class.create', 'live_class_session', (int)$sessionId, [
+                'course_id' => (int)$data['course_id'],
+                'scheduled_at' => $scheduledAt,
+                'duration_minutes' => (int)$duration,
+            ]);
             echo json_encode(['status' => 'success', 'session_id' => $sessionId]);
             return;
         }
@@ -197,6 +205,9 @@ class LiveClassController {
         }
 
         $this->sessionModel->updateStatus($sessionId, $status);
+        $this->auditLog->log($teacher['id'] ?? null, 'teacher', 'live_class.update_status', 'live_class_session', (int)$sessionId, [
+            'status' => $status,
+        ]);
         echo json_encode(['status' => 'success']);
     }
 
@@ -217,7 +228,13 @@ class LiveClassController {
             return;
         }
 
+        $session = $this->sessionModel->findById($sessionId);
         $this->sessionModel->delete($sessionId);
+        $this->auditLog->log($teacher['id'] ?? null, 'teacher', 'live_class.delete', 'live_class_session', (int)$sessionId, [
+            'course_id' => $session['course_id'] ?? null,
+            'scheduled_at' => $session['scheduled_at'] ?? null,
+            'duration_minutes' => $session['duration_minutes'] ?? null,
+        ]);
         echo json_encode(['status' => 'success']);
     }
 }
