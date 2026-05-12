@@ -347,7 +347,7 @@ const CourseContentEditor = () => {
                             }`}
                           >
                              <FileUp size={24} />
-                             <span className="text-xs font-bold">Upload File (PDF)</span>
+                             <span className="text-xs font-bold">Upload File or Media</span>
                           </button>
                           <button 
                             onClick={() => setMaterialType('reference')}
@@ -366,7 +366,7 @@ const CourseContentEditor = () => {
                               type="file" 
                               id="file-upload" 
                               className="hidden" 
-                              accept=".pdf,.doc,.docx"
+                              accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.jpg,.jpeg,.png"
                               onChange={(e) => setMaterialFile(e.target.files[0])}
                             />
                             <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
@@ -375,6 +375,7 @@ const CourseContentEditor = () => {
                                  {materialFile ? materialFile.name : 'Drop your file here or click to browse'}
                                </span>
                             </label>
+                            <p className="mt-3 text-xs text-slate-400">Supported: PDF, DOC, DOCX, PPT, PPTX, MP4, MP3, JPG, PNG</p>
                          </div>
                        ) : (
                          <div>
