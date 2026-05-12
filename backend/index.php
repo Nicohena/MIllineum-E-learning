@@ -281,14 +281,22 @@ switch ($resource) {
         $controller = new \Controllers\NotificationController();
         if ($id === 'list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             $controller->getNotifications();
+        } elseif ($id === 'stats' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getNotificationStats();
+        } elseif ($id === 'by-type' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getNotificationsByType();
         } elseif ($id === 'mark-read' && $uri_parts[$api_index + 2] && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $controller->markRead($uri_parts[$api_index + 2]);
         } elseif ($id === 'mark-all-read' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $controller->markAllRead();
+        } elseif ($id === 'mark-batch' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->markReadBatch();
         } elseif ($id === 'delete' && $uri_parts[$api_index + 2] && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
             $controller->deleteNotification($uri_parts[$api_index + 2]);
         } elseif ($id === 'delete-all' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
             $controller->deleteAllNotifications();
+        } elseif ($id === 'send' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->sendNotification();
         }
         break;
 
