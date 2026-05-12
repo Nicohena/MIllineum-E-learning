@@ -285,6 +285,10 @@ switch ($resource) {
             $controller->markRead($uri_parts[$api_index + 2]);
         } elseif ($id === 'mark-all-read' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $controller->markAllRead();
+        } elseif ($id === 'delete' && $uri_parts[$api_index + 2] && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $controller->deleteNotification($uri_parts[$api_index + 2]);
+        } elseif ($id === 'delete-all' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $controller->deleteAllNotifications();
         }
         break;
 
