@@ -2,6 +2,29 @@ export const modulePageMockData = {
   helpCenter: {
     title: 'Find answers fast',
     subtitle: 'Search our support library and quickly get back to your learning workflow.',
+    guides: [
+      {
+        id: 1,
+        category: 'Student Guide',
+        title: 'Navigating Your Courses',
+        description: 'A step-by-step walkthrough for finding enrolled courses, opening lessons, and troubleshooting access issues.',
+        tags: ['navigation', 'courses', 'student']
+      },
+      {
+        id: 2,
+        category: 'Teacher Guide',
+        title: 'Uploading Learning Materials',
+        description: 'Best practices for teachers to upload documents, videos, and PDFs safely through the course editor.',
+        tags: ['uploads', 'materials', 'teacher']
+      },
+      {
+        id: 3,
+        category: 'Support Guide',
+        title: 'Contacting Help and Support',
+        description: 'How to use the Help Center and submit support requests for account or course access problems.',
+        tags: ['support', 'help', 'contact']
+      }
+    ],
     articles: [
       {
         id: 1,
