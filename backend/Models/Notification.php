@@ -83,6 +83,24 @@ class Notification {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function existsSimilar($userId, $type, $title, $link = null) {
+        $sql = "SELECT id FROM notifications
+                WHERE user_id = :uid
+                  AND type = :type
+                  AND title = :title
+                  AND ((link IS NULL AND :link_is_null = 1) OR link = :link)
+                LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'uid' => $userId,
+            'type' => $type,
+            'title' => $title,
+            'link' => $link,
+            'link_is_null' => $link === null ? 1 : 0
+        ]);
+        return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function getUnreadByType($userId, $type) {
         $stmt = $this->db->prepare("
             SELECT COUNT(*) as count 
@@ -114,6 +132,8 @@ class Notification {
                 COUNT(*) as total,
                 SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread,
                 SUM(CASE WHEN type = 'assignment' THEN 1 ELSE 0 END) as assignments,
+                SUM(CASE WHEN type = 'deadline' THEN 1 ELSE 0 END) as deadlines,
+                SUM(CASE WHEN type = 'live_class' THEN 1 ELSE 0 END) as live_classes,
                 SUM(CASE WHEN type = 'announcement' THEN 1 ELSE 0 END) as announcements,
                 SUM(CASE WHEN type = 'grade' THEN 1 ELSE 0 END) as grades,
                 SUM(CASE WHEN type = 'message' THEN 1 ELSE 0 END) as messages

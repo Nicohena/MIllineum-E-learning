@@ -97,6 +97,8 @@ class NotificationHelper {
             'message' => '[Message]',
             'course' => '[Course]',
             'attendance' => '[Attendance]',
+            'deadline' => '[Deadline]',
+            'live_class' => '[Class]',
             'default' => '[Notification]'
         ];
 
@@ -114,7 +116,9 @@ class NotificationHelper {
             'grade' => '/assets/images/grade-icon.png',
             'message' => '/assets/images/message-icon.png',
             'course' => '/assets/images/course-icon.png',
-            'attendance' => '/assets/images/attendance-icon.png'
+            'attendance' => '/assets/images/attendance-icon.png',
+            'deadline' => '/assets/images/assignment-icon.png',
+            'live_class' => '/assets/images/course-icon.png'
         ];
 
         return $icons[$type] ?? '/assets/images/notification-icon.png';
