@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import teacherService from '../../services/teacherService';
 import assignmentService from '../../services/assignmentService';
+import DashboardNotifications from '../../components/common/DashboardNotifications';
 import { Link, useNavigate } from 'react-router-dom';
 
 const TeacherDashboard = () => {
@@ -113,6 +114,8 @@ const TeacherDashboard = () => {
 
         {/* Recent Submissions */}
         <div className="space-y-8">
+           <DashboardNotifications compact />
+
            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-50 shadow-sm relative overflow-hidden">
               <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
                 <FileText className="text-indigo-600" size={20} />

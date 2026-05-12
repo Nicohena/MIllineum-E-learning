@@ -23,9 +23,11 @@ import Messaging from '../pages/student/Messaging';
 import MyGrades from '../pages/student/MyGrades';
 import MyLearning from '../pages/student/MyLearning';
 import LiveClassJoin from '../pages/student/LiveClassJoin';
+import StudentQuizzes from '../pages/student/Quizzes';
 import CourseViewer from '../pages/student/CourseViewer';
 import CourseContentEditor from '../pages/teacher/CourseContentEditor';
 import TeacherAssignments from '../pages/teacher/AssignmentCreate';
+import TeacherQuizzes from '../pages/teacher/Quizzes';
 import ForumManage from '../pages/teacher/ForumManage';
 import GradingView from '../pages/teacher/GradingView';
 import TeacherMessaging from '../pages/teacher/Messaging';
@@ -117,6 +119,14 @@ export const AppRoutes = () => (
         }
       />
       <Route
+        path="teacher/quizzes"
+        element={
+          <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
+            <TeacherQuizzes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="teacher/live-classes"
         element={
           <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
@@ -186,6 +196,14 @@ export const AppRoutes = () => (
         element={
           <ProtectedRoute allowedRoles={[ROLES.STUDENT]}>
             <Assignments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="student/quizzes"
+        element={
+          <ProtectedRoute allowedRoles={[ROLES.STUDENT]}>
+            <StudentQuizzes />
           </ProtectedRoute>
         }
       />

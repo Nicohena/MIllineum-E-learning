@@ -128,7 +128,46 @@ CREATE TABLE IF NOT EXISTS task_submissions (
     UNIQUE KEY unique_submission (assignment_id, student_id)
 ) ENGINE=InnoDB;
 
--- 10. Live Class Sessions
+-- 10. Quizzes
+CREATE TABLE IF NOT EXISTS quizzes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    teacher_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATETIME NOT NULL,
+    time_limit_minutes INT DEFAULT 15,
+    questions_json LONGTEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+
+    INDEX idx_quizzes_course (course_id),
+    INDEX idx_quizzes_teacher (teacher_id),
+    INDEX idx_quizzes_due_date (due_date)
+) ENGINE=InnoDB;
+
+-- 11. Quiz Attempts
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    quiz_id INT NOT NULL,
+    student_id INT NOT NULL,
+    answers_json LONGTEXT NOT NULL,
+    score INT DEFAULT 0,
+    total_points INT DEFAULT 0,
+    percentage DECIMAL(5,2) DEFAULT 0,
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+
+    UNIQUE KEY unique_quiz_attempt (quiz_id, student_id),
+    INDEX idx_quiz_attempt_student (student_id)
+) ENGINE=InnoDB;
+
+-- 12. Live Class Sessions
 CREATE TABLE IF NOT EXISTS live_class_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_id INT NOT NULL,
@@ -150,7 +189,7 @@ CREATE TABLE IF NOT EXISTS live_class_sessions (
     INDEX idx_live_class_status (status)
 ) ENGINE=InnoDB;
 
--- 11. Attendance Table
+-- 13. Attendance Table
 CREATE TABLE IF NOT EXISTS attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
@@ -170,7 +209,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     INDEX idx_attendance_timestamp (timestamp)
 ) ENGINE=InnoDB;
 
--- 12. Timetable Entries
+-- 14. Timetable Entries
 CREATE TABLE IF NOT EXISTS timetable_entries (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
@@ -195,7 +234,7 @@ CREATE TABLE IF NOT EXISTS timetable_entries (
     INDEX idx_timetable_year (academic_year_id)
 ) ENGINE=InnoDB;
 
--- 13. Notifications Table
+-- 15. Notifications Table
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,

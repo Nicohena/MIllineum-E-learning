@@ -215,6 +215,25 @@ switch ($resource) {
         }
         break;
 
+    case 'quizzes':
+        $controller = new \Controllers\QuizController();
+        if ($id === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->createQuiz();
+        } elseif ($id === 'my-quizzes' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getMyQuizzes();
+        } elseif ($id === 'attempts' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getAttempts();
+        } elseif ($id === 'delete' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $controller->deleteQuiz();
+        } elseif ($id === 'student' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getStudentQuizzes();
+        } elseif ($id === 'take' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->getStudentQuiz();
+        } elseif ($id === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->submitQuiz();
+        }
+        break;
+
     case 'live-classes':
         $controller = new \Controllers\LiveClassController();
         if ($id === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
