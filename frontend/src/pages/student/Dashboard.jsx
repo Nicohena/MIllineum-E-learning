@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowUpRight,
-  Bell,
   BookOpen,
   Calendar,
   CalendarDays,
@@ -18,10 +17,10 @@ import {
   Timer,
   Users,
   Award,
-  X,
   Zap
 } from 'lucide-react';
 import { Card } from '../../components/common/Card';
+import DashboardNotifications from '../../components/common/DashboardNotifications';
 import { useAuth } from '../../context/AuthContext';
 import studentService from '../../services/studentService';
 import assignmentService from '../../services/assignmentService';
@@ -62,11 +61,6 @@ const Dashboard = () => {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications] = useState([
-    { id: 1, title: 'Assignment due soon', message: 'Check your latest pending work.', time: 'Just now', read: false },
-    { id: 2, title: 'New course material available', message: 'Your teacher uploaded new content.', time: 'Today', read: true },
-  ]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -87,11 +81,11 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  const pendingCount = assignments.filter(a => a.status === 'pending').length;
-  const gradedCount = assignments.filter(a => a.status === 'graded').length;
+  const pendingCount = assignments.filter(a => !a.submission_status || a.submission_status === 'pending').length;
+  const gradedCount = assignments.filter(a => a.submission_status === 'graded').length;
   
   const upcomingDeadlines = assignments
-    .filter(a => a.status === 'pending')
+    .filter(a => !a.submission_status || a.submission_status === 'pending')
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
     .slice(0, 4);
 
@@ -127,7 +121,7 @@ const Dashboard = () => {
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       
-      {/* Header with Notifications */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold text-slate-800">
@@ -146,38 +140,6 @@ const Dashboard = () => {
           >
             <RefreshCw size={20} className={`text-slate-500 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
-          
-          <div className="relative">
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
-            >
-              <Bell size={20} className="text-slate-600" />
-              {notifications.filter(n => !n.read).length > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
-              )}
-            </button>
-            
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-fadeInDown">
-                <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-800">Notifications</h3>
-                  <button onClick={() => setShowNotifications(false)}>
-                    <X size={16} className="text-slate-400" />
-                  </button>
-                </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {notifications.map(notif => (
-                    <div key={notif.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer ${!notif.read ? 'bg-indigo-50/30' : ''}`}>
-                      <p className="font-medium text-slate-800 text-sm">{notif.title}</p>
-                      <p className="text-xs text-slate-500 mt-1">{notif.message}</p>
-                      <p className="text-xs text-slate-400 mt-1">{notif.time}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -257,6 +219,8 @@ const Dashboard = () => {
 
         {/* Right Column - Upcoming Deadlines */}
         <div className="space-y-6">
+          <DashboardNotifications compact />
+
           <Card variant="white" padding="lg" className="rounded-[2rem]">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">

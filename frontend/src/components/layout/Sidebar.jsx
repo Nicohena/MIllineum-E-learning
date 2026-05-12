@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Video,
   CalendarDays,
+  HelpCircle,
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, isOpen, badge }) => (
@@ -112,6 +113,7 @@ export const Sidebar = ({ isOpen, setOpen }) => {
             ...dashboard,
             { to: '/teacher/courses', icon: BookOpen, label: 'My Courses' },
             { to: '/teacher/assignments', icon: ClipboardList, label: 'Assignments' },
+            { to: '/teacher/quizzes', icon: HelpCircle, label: 'Quizzes' },
             { to: '/teacher/live-classes', icon: Video, label: 'Live Classes' },
             { to: '/teacher/grading', icon: BarChart3, label: 'Grading' },
             { to: '/teacher/messages', icon: MessageSquare, label: 'Messages', badge: '3' },
@@ -128,6 +130,7 @@ export const Sidebar = ({ isOpen, setOpen }) => {
           ...dashboard,
           { to: '/student/courses', icon: BookOpen, label: 'My Learning' },
           { to: '/student/assignments', icon: FileText, label: 'Assignments', badge: '2' },
+          { to: '/student/quizzes', icon: HelpCircle, label: 'Quizzes' },
           { to: '/student/live-classes', icon: Video, label: 'Live Classes' },
           { to: '/student/grades', icon: BarChart3, label: 'My Grades' },
           { to: '/student/messages', icon: MessageSquare, label: 'Messaging', badge: '5' },

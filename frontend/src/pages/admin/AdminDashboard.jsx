@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, BookOpen, CalendarRange, Shield, Users } from 'lucide-react';
 import adminService from '../../services/adminService';
+import DashboardNotifications from '../../components/common/DashboardNotifications';
 
 const StatCard = ({ label, value, icon: Icon, color }) => (
   <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -90,6 +91,8 @@ const AdminDashboard = () => {
         </div>
 
         <div className="space-y-6">
+          <DashboardNotifications compact />
+
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <CalendarRange size={20} className="text-indigo-600" />
