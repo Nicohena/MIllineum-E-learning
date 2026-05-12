@@ -9,6 +9,7 @@ import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import SystemBackup from '../pages/admin/SystemBackup';
+import HelpQueries from '../pages/admin/HelpQueries';
 import TimetableManagement from '../pages/admin/TimetableManagement';
 import TimetableManager from '../pages/admin/TimetableManager';
 import UserManagement from '../pages/admin/UserManagement';
@@ -96,6 +97,14 @@ export const AppRoutes = () => (
         element={
           <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
             <SystemBackup />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="admin/help-queries"
+        element={
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+            <HelpQueries />
           </ProtectedRoute>
         }
       />
