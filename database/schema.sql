@@ -170,25 +170,27 @@ CREATE TABLE IF NOT EXISTS attendance (
     INDEX idx_attendance_timestamp (timestamp)
 ) ENGINE=InnoDB;
 
--- 12. Audit Logs (who changed what and when)
-CREATE TABLE IF NOT EXISTS audit_logs (
+-- 12. Timetable Entries
+CREATE TABLE IF NOT EXISTS timetable_entries (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    actor_id INT NULL,
-    actor_role VARCHAR(20) NULL,
-    action VARCHAR(120) NOT NULL,
-    entity_type VARCHAR(80) NULL,
-    entity_id INT NULL,
-    details JSON NULL,
-    ip_address VARCHAR(45) NULL,
-    user_agent VARCHAR(255) NULL,
-    request_method VARCHAR(10) NULL,
-    request_path VARCHAR(255) NULL,
+    class_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    teacher_id INT NOT NULL,
+    academic_year_id INT NOT NULL,
+    day_of_week ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday') NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    room VARCHAR(100) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    INDEX idx_audit_actor (actor_id),
-    INDEX idx_audit_entity (entity_type, entity_id),
-    INDEX idx_audit_action (action),
-    INDEX idx_audit_created (created_at),
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (academic_year_id) REFERENCES academic_years(id) ON DELETE CASCADE,
 
-    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL
+    INDEX idx_timetable_class_day (class_id, day_of_week),
+    INDEX idx_timetable_teacher_day (teacher_id, day_of_week),
+    INDEX idx_timetable_year (academic_year_id)
 ) ENGINE=InnoDB;

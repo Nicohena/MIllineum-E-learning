@@ -231,28 +231,77 @@ const CourseViewer = () => {
   );
 };
 
-const MaterialCard = ({ material }) => (
-  <div className="bg-white p-7 rounded-[2.5rem] border border-slate-100 flex flex-col h-full hover:shadow-xl transition-all group">
-    <div className="flex items-start justify-between mb-6">
-      <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-        {material.file_type === 'PDF' ? <FileText size={28} /> : <PlayCircle size={28} />}
+const MaterialCard = ({ material }) => {
+  const normalizedType = (material.file_type || '').toLowerCase();
+  const fileUrl = material.file_url;
+  const isPdf = normalizedType === 'pdf' || /\.pdf($|\?)/i.test(fileUrl);
+  const isVideo = /(mp4|webm|ogg)$/i.test(fileUrl) || /(mp4|webm|ogg)/i.test(normalizedType);
+  const isImage = /(jpe?g|png|gif|webp)$/i.test(fileUrl) || /(jpe?g|png|gif|webp)/i.test(normalizedType);
+
+  const renderPreview = () => {
+    if (isPdf) {
+      return (
+        <iframe
+          src={fileUrl}
+          title={material.title}
+          className="w-full h-56 rounded-[2rem] border border-slate-200 overflow-hidden"
+        />
+      );
+    }
+
+    if (isVideo) {
+      return (
+        <video
+          controls
+          src={fileUrl}
+          className="w-full h-56 rounded-[2rem] border border-slate-200 object-cover"
+        />
+      );
+    }
+
+    if (isImage) {
+      return (
+        <img
+          src={fileUrl}
+          alt={material.title}
+          className="w-full h-56 rounded-[2rem] border border-slate-200 object-cover"
+        />
+      );
+    }
+
+    return (
+      <div className="w-full h-56 rounded-[2rem] border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-sm font-bold">
+        Preview unavailable
       </div>
-      <span className="px-3 py-1 bg-slate-50 text-slate-400 rounded-full text-[10px] font-black uppercase tracking-widest">
-        {material.file_type || 'DOC'}
-      </span>
+    );
+  };
+
+  return (
+    <div className="bg-white p-7 rounded-[2.5rem] border border-slate-100 flex flex-col h-full hover:shadow-xl transition-all group">
+      <div className="flex items-start justify-between mb-6">
+        <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+          {isPdf ? <FileText size={28} /> : isVideo ? <PlayCircle size={28} /> : <BookOpen size={28} />}
+        </div>
+        <span className="px-3 py-1 bg-slate-50 text-slate-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+          {material.file_type || 'FILE'}
+        </span>
+      </div>
+      {renderPreview()}
+      <div className="mt-6 flex-1 flex flex-col">
+        <h4 className="text-lg font-black text-slate-900 mb-2 leading-tight">{material.title}</h4>
+        <p className="text-sm text-slate-500 line-clamp-2 mb-8 flex-1">{material.description || 'Supplementary resource for deeper understanding.'}</p>
+        <a 
+          href={material.file_url} 
+          target="_blank" 
+          rel="noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl font-black text-xs transition-all shadow-lg shadow-slate-100"
+        >
+          <Download size={16} /> DOWNLOAD RESOURCE
+        </a>
+      </div>
     </div>
-    <h4 className="text-lg font-black text-slate-900 mb-2 leading-tight">{material.title}</h4>
-    <p className="text-sm text-slate-500 line-clamp-2 mb-8 flex-1">{material.description || 'Supplementary resource for deeper understanding.'}</p>
-    <a 
-      href={material.file_url} 
-      target="_blank" 
-      rel="noreferrer"
-      className="flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl font-black text-xs transition-all shadow-lg shadow-slate-100"
-    >
-      <Download size={16} /> DOWNLOAD RESOURCE
-    </a>
-  </div>
-);
+  );
+};
 
 const EmptyState = ({ icon: Icon, title, description }) => (
   <div className="text-center py-20 px-6">

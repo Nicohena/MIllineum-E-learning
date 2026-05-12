@@ -127,8 +127,14 @@ switch ($resource) {
             $controller->deleteYear();
         } elseif ($id === 'assignments' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             $controller->listAssignments();
-        } elseif ($id === 'audit-logs' && $_SERVER['REQUEST_METHOD'] === 'GET') {
-            $controller->listAuditLogs();
+        } elseif ($id === 'timetable' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->listTimetableEntries();
+        } elseif ($id === 'timetable' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->createTimetableEntry();
+        } elseif ($id === 'timetable' && $_SERVER['REQUEST_METHOD'] === 'PUT') {
+            $controller->updateTimetableEntry();
+        } elseif ($id === 'timetable' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $controller->deleteTimetableEntry();
         } elseif ($id === 'assign' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $controller->assignTeacher();
         } elseif ($id === 'assign-student' && $_SERVER['REQUEST_METHOD'] === 'POST') {

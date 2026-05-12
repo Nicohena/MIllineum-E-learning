@@ -8,7 +8,7 @@ use Models\Assignment;
 use Models\User;
 use Models\AcademicYear;
 use Models\Course;
-use Models\AuditLog;
+use Models\Timetable;
 use Core\JwtHandler;
 use Core\Database;
 
@@ -19,7 +19,7 @@ class AdminController {
     private $userModel;
     private $yearModel;
     private $courseModel;
-    private $auditLog;
+    private $timetableModel;
     private $db;
 
     public function __construct() {
@@ -29,7 +29,7 @@ class AdminController {
         $this->userModel = new User();
         $this->yearModel = new AcademicYear();
         $this->courseModel = new Course();
-        $this->auditLog = new AuditLog();
+        $this->timetableModel = new Timetable();
         $this->db = Database::getInstance()->getConnection();
     }
 
@@ -166,6 +166,240 @@ class AdminController {
             'status' => 'success',
             'assignments' => $this->assignmentModel->getAll()
         ]);
+    }
+
+    public function listTimetableEntries() {
+        if (!$this->verifyAdmin()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden: Admin access only']);
+            return;
+        }
+
+        $activeYear = $this->yearModel->getActiveYear();
+        $yearId = $_GET['year_id'] ?? ($activeYear['id'] ?? null);
+        $classId = $_GET['class_id'] ?? null;
+
+        echo json_encode([
+            'status' => 'success',
+            'active_year' => $activeYear,
+            'entries' => $this->timetableModel->getAll($yearId, $classId)
+        ]);
+    }
+
+    public function createTimetableEntry() {
+        if (!$this->verifyAdmin()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden: Admin access only']);
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true) ?: [];
+        $validated = $this->validateTimetablePayload($data);
+
+        if (!$validated) {
+            return;
+        }
+
+        if ($this->timetableModel->hasOverlap(
+            $validated['class_id'],
+            $validated['teacher_id'],
+            $validated['academic_year_id'],
+            $validated['day_of_week'],
+            $validated['start_time'],
+            $validated['end_time']
+        )) {
+            http_response_code(409);
+            echo json_encode(['error' => 'This class or teacher already has a timetable slot during that time']);
+            return;
+        }
+
+        $entryId = $this->timetableModel->create($validated);
+        if (!$entryId) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to create timetable entry']);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'entry_id' => $entryId,
+            'message' => 'Timetable entry created successfully'
+        ]);
+    }
+
+    public function updateTimetableEntry() {
+        if (!$this->verifyAdmin()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden: Admin access only']);
+            return;
+        }
+
+        $entryId = $_GET['id'] ?? null;
+        if (!$entryId || !$this->timetableModel->findById($entryId)) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Timetable entry not found']);
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true) ?: [];
+        $validated = $this->validateTimetablePayload($data);
+
+        if (!$validated) {
+            return;
+        }
+
+        if ($this->timetableModel->hasOverlap(
+            $validated['class_id'],
+            $validated['teacher_id'],
+            $validated['academic_year_id'],
+            $validated['day_of_week'],
+            $validated['start_time'],
+            $validated['end_time'],
+            $entryId
+        )) {
+            http_response_code(409);
+            echo json_encode(['error' => 'This class or teacher already has a timetable slot during that time']);
+            return;
+        }
+
+        if (!$this->timetableModel->update($entryId, $validated)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to update timetable entry']);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Timetable entry updated successfully'
+        ]);
+    }
+
+    public function deleteTimetableEntry() {
+        if (!$this->verifyAdmin()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden: Admin access only']);
+            return;
+        }
+
+        $entryId = $_GET['id'] ?? null;
+        if (!$entryId || !$this->timetableModel->findById($entryId)) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Timetable entry not found']);
+            return;
+        }
+
+        if (!$this->timetableModel->delete($entryId)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete timetable entry']);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Timetable entry deleted successfully'
+        ]);
+    }
+
+    private function validateTimetablePayload($data) {
+        $required = ['class_id', 'subject_id', 'teacher_id', 'day_of_week', 'start_time', 'end_time'];
+        foreach ($required as $field) {
+            if (empty($data[$field])) {
+                http_response_code(400);
+                echo json_encode(['error' => "Field '{$field}' is required"]);
+                return false;
+            }
+        }
+
+        $day = strtolower(trim($data['day_of_week']));
+        $allowedDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        if (!in_array($day, $allowedDays, true)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid day of week']);
+            return false;
+        }
+
+        $startTime = $this->normalizeTime($data['start_time']);
+        $endTime = $this->normalizeTime($data['end_time']);
+        if (!$startTime || !$endTime || $startTime >= $endTime) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Start time must be before end time']);
+            return false;
+        }
+
+        $class = $this->classModel->findById((int)$data['class_id']);
+        if (!$class) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid class ID']);
+            return false;
+        }
+
+        $subject = $this->subjectModel->findById((int)$data['subject_id']);
+        if (!$subject) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid subject ID']);
+            return false;
+        }
+
+        $teacher = $this->userModel->findById((int)$data['teacher_id']);
+        if (!$teacher || $teacher['role'] !== 'teacher') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid teacher ID']);
+            return false;
+        }
+
+        $activeYear = $this->yearModel->getActiveYear();
+        $yearId = (int)($data['academic_year_id'] ?? ($activeYear['id'] ?? 0));
+        if (!$yearId) {
+            http_response_code(500);
+            echo json_encode(['error' => 'No active academic year found. Please create one first.']);
+            return false;
+        }
+
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*)
+            FROM class_assignments
+            WHERE class_id = :class_id
+              AND subject_id = :subject_id
+              AND teacher_id = :teacher_id
+              AND academic_year_id = :year_id
+        ");
+        $stmt->execute([
+            'class_id' => (int)$data['class_id'],
+            'subject_id' => (int)$data['subject_id'],
+            'teacher_id' => (int)$data['teacher_id'],
+            'year_id' => $yearId
+        ]);
+
+        if ((int)$stmt->fetchColumn() === 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Create the matching class, subject, and teacher assignment before scheduling this lesson']);
+            return false;
+        }
+
+        return [
+            'class_id' => (int)$data['class_id'],
+            'subject_id' => (int)$data['subject_id'],
+            'teacher_id' => (int)$data['teacher_id'],
+            'academic_year_id' => $yearId,
+            'day_of_week' => $day,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'room' => trim((string)($data['room'] ?? '')) ?: null,
+            'notes' => trim((string)($data['notes'] ?? '')) ?: null,
+        ];
+    }
+
+    private function normalizeTime($value) {
+        $value = trim((string)$value);
+        if (preg_match('/^\d{2}:\d{2}$/', $value)) {
+            return $value . ':00';
+        }
+
+        if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $value)) {
+            return $value;
+        }
+
+        return null;
     }
 
     /**

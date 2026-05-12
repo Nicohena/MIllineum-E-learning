@@ -17,6 +17,7 @@ import {
   ClipboardList,
   GraduationCap,
   Video,
+  CalendarDays,
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, isOpen, badge }) => (
@@ -96,6 +97,7 @@ export const Sidebar = ({ isOpen, setOpen }) => {
             ...dashboard,
             { to: '/admin/users', icon: Users, label: 'Users' },
             { to: '/admin/courses', icon: GraduationCap, label: 'Classes & Subjects' },
+            { to: '/admin/timetable', icon: CalendarDays, label: 'Timetable' },
             { to: '/admin/settings', icon: Settings, label: 'Academic Years' },
           ],
         },

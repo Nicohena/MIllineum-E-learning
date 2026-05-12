@@ -80,9 +80,23 @@ const adminService = {
     return response.data.assignments || [];
   },
 
-  /** Paginated audit trail (admin only). Optional params: page, per_page, action, entity_type, actor_id */
-  getAuditLogs: async (params = {}) => {
-    const response = await api.get('/admin/audit-logs', { params });
+  getTimetable: async (params = {}) => {
+    const response = await api.get('/admin/timetable', { params });
+    return response.data;
+  },
+
+  createTimetableEntry: async (payload) => {
+    const response = await api.post('/admin/timetable', payload);
+    return response.data;
+  },
+
+  updateTimetableEntry: async (entryId, payload) => {
+    const response = await api.put(`/admin/timetable?id=${entryId}`, payload);
+    return response.data;
+  },
+
+  deleteTimetableEntry: async (entryId) => {
+    const response = await api.delete(`/admin/timetable?id=${entryId}`);
     return response.data;
   },
 
