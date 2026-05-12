@@ -194,3 +194,21 @@ CREATE TABLE IF NOT EXISTS timetable_entries (
     INDEX idx_timetable_teacher_day (teacher_id, day_of_week),
     INDEX idx_timetable_year (academic_year_id)
 ) ENGINE=InnoDB;
+
+-- 13. Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    link VARCHAR(500) DEFAULT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    
+    INDEX idx_notification_user (user_id),
+    INDEX idx_notification_read (is_read),
+    INDEX idx_notification_created (created_at)
+) ENGINE=InnoDB;

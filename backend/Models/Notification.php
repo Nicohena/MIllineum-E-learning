@@ -54,4 +54,20 @@ class Notification {
         $stmt->execute(['uid' => $userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
     }
+
+    public function delete($id, $userId) {
+        $stmt = $this->db->prepare("DELETE FROM notifications WHERE id = :id AND user_id = :uid");
+        return $stmt->execute(['id' => $id, 'uid' => $userId]);
+    }
+
+    public function deleteAll($userId) {
+        $stmt = $this->db->prepare("DELETE FROM notifications WHERE user_id = :uid");
+        return $stmt->execute(['uid' => $userId]);
+    }
+
+    public function getById($id, $userId) {
+        $stmt = $this->db->prepare("SELECT * FROM notifications WHERE id = :id AND user_id = :uid");
+        $stmt->execute(['id' => $id, 'uid' => $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
